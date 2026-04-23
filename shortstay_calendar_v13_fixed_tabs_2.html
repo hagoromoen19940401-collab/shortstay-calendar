@@ -463,7 +463,12 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    const SUPABASE_URL = 'https://fmnkqxzrfqyfxwsfcuxp.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_P0eoNtOVGjVWnvvKYIAVWA_xox2a5ai';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     const STORAGE_KEY = 'shortstay_calendar_v13_data';
     const DEFAULT_CHECK_ITEMS = ['衣類', '薬', '洗面用具', '上履き', '連絡帳', 'オムツ類', 'その他'];
     const CHECK_ITEM_KEY = 'shortstay_calendar_v13_check_items';
@@ -528,37 +533,64 @@
       plannedCheckoutList: document.getElementById('plannedCheckoutList')
     };
 
-    function saveCheckItems() { localStorage.setItem(CHECK_ITEM_KEY, JSON.stringify(state.checkItems)); }
-
-    function saveToStorage(){
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ entries: state.entries, checkItems: state.checkItems }));
-      flash('ブラウザ保存しました');
+    function saveCheckItems() {
+      sb.from('shortstay_check_items').upsert({ id: 1, items: state.checkItems, updated_at: new Date().toISOString() }).then(({error}) => { if(error) console.error(error); });
     }
-    function loadFromStorage(){
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          state.entries = parsed;
-          return;
-        }
-        if (parsed && typeof parsed === 'object') {
-          if (Array.isArray(parsed.entries)) state.entries = parsed.entries;
-          if (Array.isArray(parsed.checkItems) && parsed.checkItems.length) state.checkItems = parsed.checkItems;
-        }
-      } catch (e) {
-        console.error(e);
+
+    async function saveToStorage(){
+      await syncEntriesToDB();
+      await saveCheckItems();
+      flash('保存しました');
+    }
+
+    async function syncEntriesToDB(){
+      // 全件upsert
+      if(state.entries.length > 0){
+        const rows = state.entries.map(e => ({
+          id: e.id, name: e.name,
+          start_date: e.startDate, start_hour: e.startHour,
+          end_date: e.endDate, end_hour: e.endHour,
+          room: e.room||'', transport_method: e.transportMethod||'',
+          meal_info: e.mealInfo||'', last_bowel_date: e.lastBowelDate||'',
+          bowel_amount: e.bowelAmount||'', last_bath_date: e.lastBathDate||'',
+          bath_count: e.bathCount||'', stay_note: e.stayNote||'', note: e.note||'',
+          checklist_checkin: e.checklistCheckin||[],
+          checklist_checkout: e.checklistCheckout||[],
+          updated_at: e.updatedAt||new Date().toISOString()
+        }));
+        const {error} = await sb.from('shortstay_entries').upsert(rows);
+        if(error) console.error(error);
       }
     }
-    function loadCheckItems() {
-      try {
-        const raw = localStorage.getItem(CHECK_ITEM_KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) state.checkItems = [...new Set(parsed.map(x => String(x).trim()).filter(Boolean))];
-      } catch (e) { console.error(e); }
+
+    async function deleteEntryFromDB(id){
+      const {error} = await sb.from('shortstay_entries').delete().eq('id', id);
+      if(error) console.error(error);
     }
+
+    async function loadFromStorage(){
+      try {
+        const {data: entries, error: e1} = await sb.from('shortstay_entries').select('*').order('start_date');
+        if(!e1 && entries){
+          state.entries = entries.map(r => ({
+            id: r.id, name: r.name,
+            startDate: r.start_date, startHour: r.start_hour,
+            endDate: r.end_date, endHour: r.end_hour,
+            room: r.room||'', transportMethod: r.transport_method||'',
+            mealInfo: r.meal_info||'', lastBowelDate: r.last_bowel_date||'',
+            bowelAmount: r.bowel_amount||'', lastBathDate: r.last_bath_date||'',
+            bathCount: r.bath_count||'', stayNote: r.stay_note||'', note: r.note||'',
+            checklistCheckin: r.checklist_checkin||[],
+            checklistCheckout: r.checklist_checkout||[],
+            updatedAt: r.updated_at
+          }));
+        }
+        const {data: ci, error: e2} = await sb.from('shortstay_check_items').select('items').eq('id',1).single();
+        if(!e2 && ci && Array.isArray(ci.items) && ci.items.length) state.checkItems = ci.items;
+      } catch(e){ console.error(e); }
+    }
+
+    function loadCheckItems() { /* DB経由のためloadFromStorageで処理 */ }
     function combineDateTime(date, time) { if (!date) return null; return new Date(`${date}T${time || '00:00'}`); }
     function fmtDate(date) { return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`; }
     function fmtTime(date) { return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`; }
@@ -631,7 +663,7 @@
     function renderLuggageTab(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.luggageSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.luggageMeta.textContent='荷物チェックを使うには、先に利用者登録をしてください。'; el.luggageCheckinGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.luggageCheckoutGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.returnSummary.innerHTML=''; return; } const currentId=el.luggageSelect.value || sorted[0].id; el.luggageSelect.innerHTML=sorted.map(entry => { const s=combineDateTime(entry.startDate, entry.startHour), missing=getUnreturnedItems(entry); return `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(s)} 入所${missing.length ? ` / 未返却${missing.length}` : ''}</option>`; }).join(''); const entry=sorted.find(x => x.id === (el.luggageSelect.value || currentId)) || sorted[0]; el.luggageSelect.value=entry.id; const checkinList=Array.isArray(entry.checklistCheckin)?entry.checklistCheckin:(Array.isArray(entry.checklist)?entry.checklist:[]), checkoutList=Array.isArray(entry.checklistCheckout)?entry.checklistCheckout:[]; el.luggageMeta.textContent=`対象: ${entry.name}さん / 居室: ${entry.room || '未設定'} / 利用期間: ${formatStayPeriod(entry)}`; renderReturnSummary(entry); renderChecklistInto(el.luggageCheckinGrid, checkinList); renderChecklistInto(el.luggageCheckoutGrid, checkoutList, checkinList); }
     function renderSlip(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.slipSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.slipContainer.innerHTML='<div class="empty">利用票を作るには、まず利用者を登録してください。</div>'; return; } const currentId=el.slipSelect.value || sorted[0].id; el.slipSelect.innerHTML=sorted.map(entry => `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 入所</option>`).join(''); const entry=sorted.find(x => x.id === (el.slipSelect.value || currentId)) || sorted[0]; el.slipSelect.value=entry.id; const transport=entry.transportMethod || '未設定'; el.slipContainer.innerHTML=`<div class="slip-sheet"><div class="slip-head"><h2 class="slip-title">ショートステイ利用票</h2><div class="slip-sub">ご家族お渡し用</div></div><div class="slip-grid"><div class="slip-row"><div class="slip-label">利用者名</div><div class="slip-value">${escapeHtml(entry.name)}</div></div><div class="slip-row"><div class="slip-label">居室</div><div class="slip-value">${escapeHtml(entry.room || '')}</div></div><div class="slip-row"><div class="slip-label">利用期間</div><div class="slip-value">${formatStayPeriod(entry)}</div></div><div class="slip-row"><div class="slip-label">利用日数</div><div class="slip-value">${calcUsageDays(entry)}日</div></div><div class="slip-row"><div class="slip-label">送迎</div><div class="slip-value">${transport}</div></div><div class="slip-row"><div class="slip-label">作成日</div><div class="slip-value">${fmtDate(new Date())}</div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">お食事について</div><div style="min-height:64px; white-space:pre-wrap;">${escapeHtml(entry.mealInfo || ' ')}</div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">排泄について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終排便日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBowelDate) || '')}</div></div><div class="slip-row"><div class="slip-label">排便量</div><div class="slip-value">${escapeHtml(entry.bowelAmount || '')}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">入浴について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終入浴日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBathDate) || '')}</div></div><div class="slip-row"><div class="slip-label">利用中の回数</div><div class="slip-value">${escapeHtml(entry.bathCount || '')}${entry.bathCount ? '回' : ''}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">利用中の様子</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.stayNote || ' ')}</div></div><div class="slip-box"><div class="section-title" style="font-size:15px; margin-bottom:8px;">備考・申し送り</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.note || ' ')}</div></div><div class="slip-footer"><div><div class="muted">ご家族確認欄</div><div class="sign-line"></div></div><div><div class="muted">施設確認欄</div><div class="sign-line"></div></div></div></div>`; }
     function renderAll(){ renderCalendar(); renderList(); renderLuggageTab(); renderSlip(); }
-    function saveSilent(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({ entries: state.entries, checkItems: state.checkItems })); }
+    function saveSilent(){ syncEntriesToDB(); }
     function escapeHtml(str){ return String(str ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
     function escapeHtmlAttr(str){ return escapeHtml(str).replaceAll('`','&#96;'); }
     function setupTabs(){ const tabs=document.querySelectorAll('.tab'), panes=['calendarTab','listTab','luggageTab','slipTab'].map(id=>document.getElementById(id)); tabs.forEach(tab => tab.addEventListener('click', () => { tabs.forEach(t=>t.classList.remove('active')); tab.classList.add('active'); panes.forEach(p=>p.classList.add('hidden')); document.getElementById(tab.dataset.tab).classList.remove('hidden'); })); }
@@ -656,13 +688,13 @@
     function openLuggage(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="luggageTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('luggageTab').classList.remove('hidden'); el.luggageSelect.value=id; renderLuggageTab(); window.scrollTo({top:0, behavior:'smooth'}); }
     function openSlip(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="slipTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('slipTab').classList.remove('hidden'); el.slipSelect.value=id; renderSlip(); window.scrollTo({top:0, behavior:'smooth'}); }
     function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.transportMethod.value=entry.transportMethod||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; el.submitBtn.textContent='更新する'; openEntryDrawer(); }
-    function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; state.entries=state.entries.filter(x => x.id!==id); saveSilent(); renderAll(); flash('削除しました'); }
+    function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; state.entries=state.entries.filter(x => x.id!==id); deleteEntryFromDB(id); renderAll(); flash('削除しました'); }
     window.openLuggage=openLuggage; window.openSlip=openSlip; window.editEntry=editEntry; window.deleteEntry=deleteEntry;
 
     el.entryForm.addEventListener('submit', e => { e.preventDefault(); const data=getFormData(); if (!data) return; const index=state.entries.findIndex(x => x.id===data.id); if (index >= 0) state.entries[index]=data; else state.entries.push(data); saveSilent(); renderAll(); resetForm(); closeEntryDrawer(); flash(index >= 0 ? '更新しました' : '登録しました'); });
     el.cancelEditBtn.addEventListener('click', () => { resetForm(); closeEntryDrawer(); });
     el.saveBtn.addEventListener('click', saveToStorage);
-    el.resetBtn.addEventListener('click', () => { if (!confirm('全データを削除しますか？')) return; state.entries=[]; saveSilent(); renderAll(); resetForm(); flash('全データを削除しました'); });
+    el.resetBtn.addEventListener('click', async () => { if (!confirm('全データを削除しますか？')) return; await sb.from('shortstay_entries').delete().neq('id',''); state.entries=[]; renderAll(); resetForm(); flash('全データを削除しました'); });
     el.exportBtn.addEventListener('click', () => { const blob=new Blob([JSON.stringify({ entries: state.entries, checkItems: state.checkItems }, null, 2)], {type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`shortstay_calendar_v13_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); });
     el.importFile.addEventListener('change', async e => { const file=e.target.files?.[0]; if (!file) return; try { const parsed=JSON.parse(await file.text()); if (Array.isArray(parsed)) state.entries=parsed; else { state.entries=Array.isArray(parsed.entries)?parsed.entries:[]; if (Array.isArray(parsed.checkItems) && parsed.checkItems.length) state.checkItems=parsed.checkItems; } saveSilent(); renderAll(); flash('読込しました'); } catch { alert('JSON読込に失敗しました'); } finally { e.target.value=''; } });
     el.prevMonthBtn.addEventListener('click', () => { state.current=new Date(state.current.getFullYear(), state.current.getMonth()-1, 1); renderAll(); });
@@ -678,7 +710,7 @@
     el.openEntryBtn.addEventListener('click', () => { resetForm(); openEntryDrawer(); });
     el.closeEntryBtn.addEventListener('click', closeEntryDrawer); el.drawerBackdrop.addEventListener('click', closeEntryDrawer); document.addEventListener('keydown', e => { if (e.key==='Escape') closeEntryDrawer(); });
 
-    loadCheckItems(); loadFromStorage(); resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll();
+    loadCheckItems(); loadFromStorage().then(() => { resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); });
   </script>
 </body>
 </html>
