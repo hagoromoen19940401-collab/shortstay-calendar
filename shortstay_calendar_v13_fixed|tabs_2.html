@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>ショートステイ利用カレンダー V13</title>
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --card:#ffffff;
+      --line:#d9e2ec;
+      --line-strong:#b7c5d3;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --primary:#2563eb;
+      --primary-soft:#dbeafe;
+      --ok:#16a34a;
+      --warn:#ea580c;
+      --danger:#dc2626;
+      --shadow:0 8px 24px rgba(15,23,42,.08);
+      --radius:18px;
+      --gap:14px;
+      --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+    }
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);}
+    body{min-height:100vh;-webkit-text-size-adjust:100%;}
+    button,input,select,textarea{font:inherit;}
+    .wrap{max-width:1320px;margin:0 auto;padding:16px 12px 40px;}
+    .hero{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    .title{font-size:clamp(24px,4vw,34px);font-weight:800;letter-spacing:.02em;margin:0;}
+    .sub{color:var(--muted);margin-top:6px;font-size:14px;}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;}
+    .btn{
+      border:none;border-radius:14px;padding:12px 14px;font-weight:700;cursor:pointer;
+      background:#fff;box-shadow:var(--shadow);color:var(--text);min-height:48px;touch-action:manipulation;
+    }
+    .btn.primary{background:var(--primary);color:#fff;}
+    .btn.soft{background:var(--primary-soft);color:var(--primary);}
+    .btn.danger{background:#fee2e2;color:var(--danger);}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+    .tab{
+      padding:12px 16px;border-radius:999px;border:1px solid var(--line);
+      background:#fff;cursor:pointer;font-weight:800;min-height:48px;
+    }
+    .tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+    .grid{display:block;}
+    .right-pane{width:100%;}
+    .calendar-large .day{min-height:154px;}
+    .calendar-large .entry{font-size:12px;}
+    .calendar-large .entry .name{font-size:12px;}
+    .calendar-large .entry .meta{font-size:11px;}
+    .entry-drawer{position:fixed;inset:0;z-index:1200;display:none;}
+    .entry-drawer.show{display:block;}
+    .drawer-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(2px);}
+    .drawer-panel{
+      position:absolute;top:0;right:0;height:100%;width:min(560px,100%);background:var(--bg);
+      border-left:1px solid var(--line);box-shadow:-20px 0 40px rgba(15,23,42,.15);overflow:auto;
+    }
+    .drawer-inner{padding:16px;}
+    .drawer-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px;}
+    .drawer-title{font-size:22px;font-weight:900;margin:0;}
+    .drawer-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+    .close-btn{border:none;background:#fff;border-radius:14px;padding:10px 12px;font-weight:800;cursor:pointer;box-shadow:var(--shadow);}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .card-head{padding:16px 16px 8px;font-size:18px;font-weight:800;}
+    .card-body{padding:16px;}
+    .muted{color:var(--muted);font-size:13px;}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .field{display:flex;flex-direction:column;gap:6px;min-width:0;}
+    .field.full{grid-column:1/-1;}
+    label{font-size:13px;font-weight:800;color:#334155;}
+    input[type="text"],input[type="date"],input[type="time"],input[type="month"],input[type="number"],select,textarea{
+      width:100%;min-height:48px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:12px 12px;
+      appearance:none;-webkit-appearance:none;
+    }
+    textarea{min-height:96px;resize:vertical;}
+    .inline{display:grid;grid-template-columns:1fr 120px;gap:8px;}
+    .inline-3{display:grid;grid-template-columns:1fr 110px 110px;gap:8px;}
+    .form-actions{display:flex;gap:8px;flex-wrap:wrap;padding-top:4px;}
+    .calendar-shell{padding:12px;}
+    .calendar-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+    .calendar-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .month-title{font-size:22px;font-weight:800;padding:0 4px;}
+    .calendar-summary-grid{display:grid;grid-template-columns:1.2fr .9fr;gap:12px;margin-bottom:12px;}
+    .info-panel{border:1px solid var(--line);border-radius:16px;background:#fff;padding:12px;}
+    .info-title{font-size:15px;font-weight:900;margin:0 0 8px;}
+    .warning-panel{border-color:#fecaca;background:#fff1f2;}
+    .warning-panel .info-title{color:#b91c1c;}
+    .warn-list,.planned-list{display:flex;flex-direction:column;gap:8px;}
+    .warn-item,.planned-item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px;border-radius:14px;background:#fff;border:1px solid var(--line);}
+    .warn-item{border-color:#fecaca;}
+    .warn-name,.planned-name{font-weight:900;font-size:13px;}
+    .warn-meta,.planned-meta{font-size:12px;color:#475569;margin-top:2px;line-height:1.4;}
+    .warn-badges,.planned-badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+    .mini-chip{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:900;}
+    .mini-chip.danger{background:#fee2e2;color:#991b1b;}
+    .mini-chip.warn{background:#ffedd5;color:#9a3412;}
+    .summary-empty{color:#64748b;font-size:13px;padding:8px 2px;}
+    .calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;}
+    .dow,.day{min-width:0;}
+    .dow{padding:8px 6px;text-align:center;font-weight:800;font-size:13px;color:#475569;}
+    .day{background:#fff;border:1px solid var(--line);border-radius:16px;min-height:138px;padding:8px;display:flex;flex-direction:column;gap:6px;overflow:hidden;}
+    .day.other{background:#f8fafc;color:#94a3b8;}
+    .day.today{outline:2px solid var(--primary);outline-offset:0;}
+    .day.has-return-alert{background:linear-gradient(180deg,#fff1f2 0%, #ffffff 36%);}
+    .day-num{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px;}
+    .day-badges{display:flex;flex-direction:column;gap:6px;overflow:hidden;}
+    .day-alert-row{display:flex;gap:6px;flex-wrap:wrap;}
+    .day-alert-badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:900;}
+    .day-alert-badge.warn{background:#ffedd5;color:#9a3412;}
+    .entry{border:1px solid #dbeafe;background:#eff6ff;border-radius:12px;padding:6px 8px;font-size:12px;line-height:1.35;word-break:break-word;border-left:8px solid #60a5fa;}
+    .entry.return-warning{box-shadow:inset 0 0 0 2px rgba(220,38,38,.14);}
+    .entry-head{display:flex;justify-content:space-between;gap:6px;align-items:flex-start;}
+    .entry .name{font-weight:800;font-size:12px;}
+    .entry .meta{color:#475569;font-size:11px;margin-top:2px;}
+    .entry .tag-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;}
+    .entry-alert{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:900;padding:0 6px;flex:0 0 auto;}
+    .tag{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:999px;font-size:10px;font-weight:800;}
+    .tag.in{background:#dcfce7;color:#166534;}
+    .tag.out{background:#fee2e2;color:#991b1b;}
+    .tag.transport{background:#fef3c7;color:#92400e;}
+    .tag.return{background:#fee2e2;color:#991b1b;}
+    .hidden{display:none !important;}
+    .list-tools{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff;}
+    table{width:100%;border-collapse:collapse;min-width:880px;background:#fff;}
+    th,td{padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top;font-size:13px;}
+    th{background:#f8fafc;position:sticky;top:0;z-index:1;white-space:nowrap;}
+    tr:hover td{background:#fafcff;}
+    .actions{display:flex;gap:6px;flex-wrap:wrap;}
+    .mini-btn{border:none;background:#eef2ff;color:#3730a3;padding:7px 10px;border-radius:10px;font-weight:700;cursor:pointer;}
+    .mini-btn.delete{background:#fee2e2;color:#b91c1c;}
+    .mini-btn.gray{background:#f1f5f9;color:#334155;}
+    .empty{padding:24px;text-align:center;color:var(--muted);}
+    .checklist-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;}
+    .check-item{display:flex;align-items:center;gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff;min-height:54px;}
+    .check-item input{width:20px;height:20px;flex:0 0 auto;pointer-events:auto;}
+    .check-item.done{background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;}
+    .check-item.done span{text-decoration:line-through;}
+    .luggage-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;margin-bottom:12px;}
+    .tiny-btn{border:none;border-radius:12px;padding:12px 12px;font-weight:700;cursor:pointer;background:#fff;box-shadow:var(--shadow);min-height:46px;}
+    .section-title{font-size:16px;font-weight:800;margin:0 0 10px;}
+    .note-box{padding:12px;border-radius:14px;background:#f8fafc;border:1px solid var(--line);font-size:13px;color:#475569;}
+    .slip-toolbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+    .slip-card{border:1px solid var(--line);border-radius:18px;background:#fff;padding:18px;}
+    .slip-sheet{border:2px solid #cbd5e1;border-radius:18px;padding:22px;background:#fff;}
+    .slip-head{text-align:center;margin-bottom:18px;}
+    .slip-title{font-size:26px;font-weight:900;letter-spacing:.08em;margin:0 0 6px;}
+    .slip-sub{font-size:13px;color:var(--muted);}
+    .slip-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;margin-bottom:14px;}
+    .slip-row{display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid #e5e7eb;padding-bottom:6px;min-height:34px;}
+    .slip-label{width:120px;flex:0 0 120px;font-weight:800;color:#334155;}
+    .slip-value{flex:1;min-width:0;word-break:break-word;}
+    .slip-box{border:1px solid var(--line);border-radius:14px;padding:12px;background:#f8fafc;}
+    .slip-footer{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px;}
+    .sign-line{border-bottom:1px solid #94a3b8;height:34px;margin-top:18px;}
+    .return-summary{margin-bottom:14px;border:1px solid #fecaca;background:#fff1f2;border-radius:16px;padding:12px;}
+    .return-summary-title{font-weight:900;color:#b91c1c;margin-bottom:8px;}
+    .return-pill-wrap{display:flex;gap:8px;flex-wrap:wrap;}
+    .return-pill{display:inline-flex;align-items:center;padding:8px 10px;border-radius:999px;background:#fee2e2;color:#991b1b;font-size:12px;font-weight:800;}
+    .return-empty{color:#64748b;font-size:13px;}
+    @media (max-width: 980px){
+      .calendar{gap:6px;}
+      .day{min-height:114px;padding:6px;}
+      .drawer-panel{width:min(100%,560px);}
+      .calendar-summary-grid{grid-template-columns:1fr;}
+    }
+    @media (max-width: 720px){
+      .wrap{padding:12px 10px 28px;}
+      .form-grid,.inline,.inline-3,.slip-grid,.slip-footer{grid-template-columns:1fr;}
+      .calendar-shell{padding:10px;}
+      .calendar{grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;}
+      .dow{font-size:10px;padding:4px 1px;}
+      .day{min-height:54px;max-height:54px;border-radius:10px;padding:4px 3px;gap:2px;overflow:hidden;cursor:pointer;}
+      .day-badges{display:none;}
+      .day-alert-row{display:none;}
+      .day-num{font-size:11px;}
+      .month-title{font-size:18px;}
+      .btn,.tab,.tiny-btn{min-height:50px;}
+      .warn-item,.planned-item{flex-direction:column;align-items:flex-start;}
+      .warn-badges,.planned-badges{justify-content:flex-start;}
+      .day-mobile-badges{display:flex;flex-direction:column;gap:1px;margin-top:2px;}
+      .day-mobile-dot{display:none;}
+      .day-mobile-name{font-size:9px;font-weight:800;padding:1px 3px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+      .day-mobile-count{font-size:9px;font-weight:800;color:var(--primary);}
+    }
+    @media (min-width: 721px){
+      .day-mobile-badges{display:none;}
+      .day-mobile-count{display:none;}
+    }
+    @media print{
+      body{background:#fff;}
+      .toolbar,.tabs,.entry-drawer,.list-tools,.actions,.mini-btn,.no-print,.calendar-summary-grid{display:none !important;}
+      .wrap{max-width:none;padding:0;}
+      .grid{display:block;}
+      .card{box-shadow:none;border:0;border-radius:0;}
+      .calendar-shell{padding:0;}
+      .day{break-inside:avoid;min-height:110px;}
+      #calendarTab,#listTab,#luggageTab{display:none !important;}
+      #slipTab.hidden{display:block !important;}
+      .slip-card{border:0;padding:0;}
+      .slip-sheet{border:0;padding:0;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <h1 class="title">ショートステイ利用カレンダー V13</h1>
+        <div class="sub">カレンダー広め表示＋未返却の視覚表示＋退苑予定者の見落とし防止</div>
+      </div>
+      <div class="toolbar no-print">
+        <button class="btn soft" id="saveBtn">保存</button>
+        <button class="btn" id="exportBtn">書き出し</button>
+        <label class="btn" for="importFile">読込</label>
+        <input id="importFile" type="file" accept="application/json" class="hidden" />
+        <button class="btn" onclick="window.print()">印刷</button>
+        <button class="btn danger" id="resetBtn">全消去</button>
+      </div>
+    </div>
+
+    <div class="tabs no-print">
+      <button class="tab active" data-tab="calendarTab">月間カレンダー</button>
+      <button class="tab" data-tab="listTab">登録一覧</button>
+      <button class="tab" data-tab="luggageTab">荷物チェック</button>
+      <button class="tab" data-tab="slipTab">利用票</button>
+      <button class="btn primary" type="button" id="openEntryBtn">＋ 利用者登録</button>
+    </div>
+
+    <div class="entry-drawer no-print" id="entryDrawer" aria-hidden="true">
+      <div class="drawer-backdrop" id="drawerBackdrop"></div>
+      <div class="drawer-panel">
+        <div class="drawer-inner">
+          <div class="drawer-head">
+            <div>
+              <h2 class="drawer-title">利用者登録</h2>
+              <div class="drawer-sub">まず利用者登録をして、荷物チェックは登録後に別タブで行えます。</div>
+            </div>
+            <button class="close-btn" type="button" id="closeEntryBtn">閉じる</button>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <form id="entryForm">
+                <input type="hidden" id="editId" />
+                <div class="form-grid">
+                  <div class="field full">
+                    <label for="name">利用者名</label>
+                    <input id="name" type="text" placeholder="例）山田 花子" required />
+                  </div>
+
+                  <div class="field full">
+                    <label>開始日時</label>
+                    <div class="inline-3">
+                      <input id="startDate" type="date" required />
+                      <input id="startHour" type="time" step="900" value="10:00" required />
+                      <select id="startPreset">
+                        <option value="">時間補助</option>
+                        <option value="09:00">09:00</option>
+                        <option value="10:00">10:00</option>
+                        <option value="11:00">11:00</option>
+                        <option value="13:00">13:00</option>
+                        <option value="14:00">14:00</option>
+                        <option value="15:00">15:00</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="field full">
+                    <label>終了日時</label>
+                    <div class="inline-3">
+                      <input id="endDate" type="date" required />
+                      <input id="endHour" type="time" step="900" value="10:00" required />
+                      <select id="endPreset">
+                        <option value="">時間補助</option>
+                        <option value="09:00">09:00</option>
+                        <option value="10:00">10:00</option>
+                        <option value="11:00">11:00</option>
+                        <option value="13:00">13:00</option>
+                        <option value="14:00">14:00</option>
+                        <option value="15:00">15:00</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="room">居室</label>
+                    <input id="room" type="text" placeholder="例）20号室" />
+                  </div>
+
+                  <div class="field">
+                    <label for="transportMethod">送迎方法</label>
+                    <select id="transportMethod">
+                      <option value="">未設定</option>
+                      <option value="施設迎え">施設迎え</option>
+                      <option value="家族送迎">家族送迎</option>
+                      <option value="その他">その他</option>
+                    </select>
+                  </div>
+
+
+                  <div class="field full">
+                    <label for="mealInfo">お食事について</label>
+                    <textarea id="mealInfo" placeholder="食事量・食形態・むせ込み・好き嫌いなど"></textarea>
+                  </div>
+
+                  <div class="field">
+                    <label for="lastBowelDate">最終排便日</label>
+                    <input id="lastBowelDate" type="date" />
+                  </div>
+
+                  <div class="field">
+                    <label for="bowelAmount">排便量</label>
+                    <select id="bowelAmount">
+                      <option value="">未設定</option>
+                      <option value="少">少</option>
+                      <option value="中">中</option>
+                      <option value="多">多</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="lastBathDate">最終入浴日</label>
+                    <input id="lastBathDate" type="date" />
+                  </div>
+
+                  <div class="field">
+                    <label for="bathCount">利用中の入浴回数</label>
+                    <input id="bathCount" type="number" min="0" step="1" placeholder="例）2" />
+                  </div>
+
+                  <div class="field full">
+                    <label for="stayNote">利用中の様子</label>
+                    <textarea id="stayNote" placeholder="日中の様子、睡眠、食事、活動、気分など"></textarea>
+                  </div>
+
+                  <div class="field full">
+                    <label for="note">備考</label>
+                    <textarea id="note" placeholder="注意事項、送迎メモ、ご家族連絡など"></textarea>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn primary" type="submit" id="submitBtn">登録する</button>
+                  <button class="btn" type="button" id="cancelEditBtn">入力リセット</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="right-pane">
+
+        <div class="card calendar-large" id="calendarTab">
+          <div class="calendar-shell">
+            <div class="calendar-head">
+              <div class="calendar-nav no-print">
+                <button class="btn" id="prevMonthBtn">← 前月</button>
+                <div class="month-title" id="monthTitle"></div>
+                <button class="btn" id="nextMonthBtn">次月 →</button>
+              </div>
+              <div class="calendar-nav">
+                <input class="no-print" id="monthPicker" type="month" />
+                <button class="btn soft no-print" id="todayBtn">今月へ</button>
+              </div>
+            </div>
+
+            <div class="calendar-summary-grid no-print">
+              <div class="info-panel warning-panel">
+                <h3 class="info-title">未返却・要確認</h3>
+                <div class="warn-list" id="calendarReturnList"></div>
+              </div>
+              <div class="info-panel">
+                <h3 class="info-title">退苑予定者一覧</h3>
+                <div class="planned-list" id="plannedCheckoutList"></div>
+              </div>
+            </div>
+
+            <div class="calendar" id="calendar"></div>
+          </div>
+        </div>
+
+        <div class="card hidden" id="slipTab">
+          <div class="card-body slip-card">
+            <div class="slip-toolbar no-print">
+              <div>
+                <h3 class="section-title">利用票</h3>
+                <div class="muted">家族へお渡しする用のシンプル表示です。</div>
+              </div>
+              <div class="toolbar">
+                <select id="slipSelect" style="min-width:260px"></select>
+                <button class="btn soft" id="slipPrintBtn" type="button">この利用票を印刷</button>
+              </div>
+            </div>
+            <div id="slipContainer"></div>
+          </div>
+        </div>
+
+        <div class="card hidden" id="luggageTab">
+          <div class="card-body">
+            <div class="list-tools">
+              <div>
+                <h3 class="section-title">荷物チェック</h3>
+                <div class="muted">利用者登録後に選んで、入所時と退苑時を分けて確認できます。</div>
+              </div>
+              <div class="toolbar">
+                <select id="luggageSelect" style="min-width:260px"></select>
+                <button class="btn soft" id="luggageSaveBtn" type="button">荷物チェックを保存</button>
+              </div>
+            </div>
+
+            <div id="returnSummary" class="return-summary"></div>
+
+            <div class="slip-box" style="margin-top:12px;">
+              <div class="luggage-add-row no-print">
+                <input id="newLuggageItem" type="text" placeholder="追加したい荷物項目を入力　例）眼鏡 / 補聴器 / パジャマ" />
+                <button class="tiny-btn" id="addLuggageItemBtn" type="button">項目追加</button>
+                <button class="tiny-btn" id="resetLuggageItemsBtn" type="button">初期項目へ戻す</button>
+              </div>
+              <div id="luggageMeta" class="muted" style="margin-bottom:12px;"></div>
+
+              <div class="slip-box" style="margin-bottom:14px;">
+                <div class="section-title" style="font-size:15px; margin-bottom:8px;">入所時 持参確認</div>
+                <div class="checklist-grid" id="luggageCheckinGrid"></div>
+              </div>
+
+              <div class="slip-box">
+                <div class="section-title" style="font-size:15px; margin-bottom:8px;">退苑時 返却確認</div>
+                <div class="checklist-grid" id="luggageCheckoutGrid"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card hidden" id="listTab">
+          <div class="card-body">
+            <div class="list-tools">
+              <div>
+                <h3 class="section-title">登録一覧</h3>
+                <div class="muted">編集・削除・確認用。ブラウザ保存にも対応しています。</div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>利用者名</th>
+                    <th>開始</th>
+                    <th>終了</th>
+                    <th>居室</th>
+                    <th>送迎</th>
+                    <th>備考</th>
+                    <th class="no-print">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="listBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 日付詳細モーダル -->
+  <div id="dayModal" style="display:none;position:fixed;inset:0;z-index:2000;">
+    <div id="dayModalBackdrop" style="position:absolute;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(2px);"></div>
+    <div style="position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-radius:24px 24px 0 0;max-height:80vh;overflow:auto;padding:20px 16px 40px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 id="dayModalTitle" style="font-size:20px;font-weight:900;margin:0;"></h3>
+        <button id="dayModalClose" style="border:none;background:#f1f5f9;border-radius:999px;padding:8px 14px;font-weight:800;cursor:pointer;">閉じる</button>
+      </div>
+      <div id="dayModalBody"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://fmnkqxzrfqyfxwsfcuxp.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_P0eoNtOVGjVWnvvKYIAVWA_xox2a5ai';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const STORAGE_KEY = 'shortstay_calendar_v13_data';
+    const DEFAULT_CHECK_ITEMS = ['衣類', '薬', '洗面用具', '上履き', '連絡帳', 'オムツ類', 'その他'];
+    const CHECK_ITEM_KEY = 'shortstay_calendar_v13_check_items';
+    const UPCOMING_DAYS = 3;
+
+    const state = {
+      entries: [],
+      checkItems: [...DEFAULT_CHECK_ITEMS],
+      current: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    };
+
+    const el = {
+      entryForm: document.getElementById('entryForm'),
+      editId: document.getElementById('editId'),
+      name: document.getElementById('name'),
+      startDate: document.getElementById('startDate'),
+      startHour: document.getElementById('startHour'),
+      endDate: document.getElementById('endDate'),
+      endHour: document.getElementById('endHour'),
+      startPreset: document.getElementById('startPreset'),
+      endPreset: document.getElementById('endPreset'),
+      room: document.getElementById('room'),
+      transportMethod: document.getElementById('transportMethod'),
+
+      mealInfo: document.getElementById('mealInfo'),
+      lastBowelDate: document.getElementById('lastBowelDate'),
+      bowelAmount: document.getElementById('bowelAmount'),
+      lastBathDate: document.getElementById('lastBathDate'),
+      bathCount: document.getElementById('bathCount'),
+      stayNote: document.getElementById('stayNote'),
+      note: document.getElementById('note'),
+      luggageSelect: document.getElementById('luggageSelect'),
+      luggageCheckinGrid: document.getElementById('luggageCheckinGrid'),
+      luggageCheckoutGrid: document.getElementById('luggageCheckoutGrid'),
+      luggageMeta: document.getElementById('luggageMeta'),
+      luggageSaveBtn: document.getElementById('luggageSaveBtn'),
+      newLuggageItem: document.getElementById('newLuggageItem'),
+      addLuggageItemBtn: document.getElementById('addLuggageItemBtn'),
+      resetLuggageItemsBtn: document.getElementById('resetLuggageItemsBtn'),
+      returnSummary: document.getElementById('returnSummary'),
+      calendar: document.getElementById('calendar'),
+      monthTitle: document.getElementById('monthTitle'),
+      monthPicker: document.getElementById('monthPicker'),
+      listBody: document.getElementById('listBody'),
+      slipSelect: document.getElementById('slipSelect'),
+      slipContainer: document.getElementById('slipContainer'),
+      slipPrintBtn: document.getElementById('slipPrintBtn'),
+      submitBtn: document.getElementById('submitBtn'),
+      cancelEditBtn: document.getElementById('cancelEditBtn'),
+      saveBtn: document.getElementById('saveBtn'),
+      exportBtn: document.getElementById('exportBtn'),
+      importFile: document.getElementById('importFile'),
+      resetBtn: document.getElementById('resetBtn'),
+      prevMonthBtn: document.getElementById('prevMonthBtn'),
+      nextMonthBtn: document.getElementById('nextMonthBtn'),
+      todayBtn: document.getElementById('todayBtn'),
+      openEntryBtn: document.getElementById('openEntryBtn'),
+      closeEntryBtn: document.getElementById('closeEntryBtn'),
+      entryDrawer: document.getElementById('entryDrawer'),
+      drawerBackdrop: document.getElementById('drawerBackdrop'),
+      calendarReturnList: document.getElementById('calendarReturnList'),
+      plannedCheckoutList: document.getElementById('plannedCheckoutList')
+    };
+
+    function saveCheckItems() {
+      sb.from('shortstay_check_items').upsert({ id: 1, items: state.checkItems, updated_at: new Date().toISOString() }).then(({error}) => { if(error) console.error(error); });
+    }
+
+    async function saveToStorage(){
+      await syncEntriesToDB();
+      await saveCheckItems();
+      flash('保存しました');
+    }
+
+    async function syncEntriesToDB(){
+      // 全件upsert
+      if(state.entries.length > 0){
+        const rows = state.entries.map(e => ({
+          id: e.id, name: e.name,
+          start_date: e.startDate, start_hour: e.startHour,
+          end_date: e.endDate, end_hour: e.endHour,
+          room: e.room||'', transport_method: e.transportMethod||'',
+          meal_info: e.mealInfo||'', last_bowel_date: e.lastBowelDate||'',
+          bowel_amount: e.bowelAmount||'', last_bath_date: e.lastBathDate||'',
+          bath_count: e.bathCount||'', stay_note: e.stayNote||'', note: e.note||'',
+          checklist_checkin: e.checklistCheckin||[],
+          checklist_checkout: e.checklistCheckout||[],
+          updated_at: e.updatedAt||new Date().toISOString()
+        }));
+        const {error} = await sb.from('shortstay_entries').upsert(rows);
+        if(error) console.error(error);
+      }
+    }
+
+    async function deleteEntryFromDB(id){
+      const {error} = await sb.from('shortstay_entries').delete().eq('id', id);
+      if(error) console.error(error);
+    }
+
+    async function loadFromStorage(){
+      try {
+        const {data: entries, error: e1} = await sb.from('shortstay_entries').select('*').order('start_date');
+        if(e1){ flash('DBエラー: ' + JSON.stringify(e1)); } else if(entries){
+          state.entries = entries.map(r => ({
+            id: r.id, name: r.name,
+            startDate: r.start_date, startHour: r.start_hour,
+            endDate: r.end_date, endHour: r.end_hour,
+            room: r.room||'', transportMethod: r.transport_method||'',
+            mealInfo: r.meal_info||'', lastBowelDate: r.last_bowel_date||'',
+            bowelAmount: r.bowel_amount||'', lastBathDate: r.last_bath_date||'',
+            bathCount: r.bath_count||'', stayNote: r.stay_note||'', note: r.note||'',
+            checklistCheckin: r.checklist_checkin||[],
+            checklistCheckout: r.checklist_checkout||[],
+            updatedAt: r.updated_at
+          }));
+        }
+        const {data: ci, error: e2} = await sb.from('shortstay_check_items').select('items').eq('id',1).maybeSingle();
+        if(!e2 && ci && Array.isArray(ci.items) && ci.items.length) state.checkItems = ci.items;
+      } catch(e){
+        console.error('loadFromStorage error:', JSON.stringify(e));
+        flash('データ読込エラー: ' + (e.message || JSON.stringify(e)));
+      }
+    }
+
+    function loadCheckItems() { /* DB経由のためloadFromStorageで処理 */ }
+    function combineDateTime(date, time) { if (!date) return null; return new Date(`${date}T${time || '00:00'}`); }
+    function fmtDate(date) { return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`; }
+    function fmtTime(date) { return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`; }
+    function fmtDateTime(date) { return `${fmtDate(date)} ${fmtTime(date)}`; }
+    function fmtYmd(dateString) { if (!dateString) return ''; const d = new Date(`${dateString}T00:00`); return Number.isNaN(d.getTime()) ? dateString : fmtDate(d); }
+    function startOfDate(date) { return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0); }
+    function endOfDate(date) { return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999); }
+    function daysDiffFloor(fromDate, toDate) { return Math.round((startOfDate(toDate) - startOfDate(fromDate)) / 86400000); }
+    function flash(message) {
+      const box = document.createElement('div');
+      box.textContent = message;
+      Object.assign(box.style, {position:'fixed', left:'50%', bottom:'20px', transform:'translateX(-50%)', background:'#111827', color:'#fff', padding:'10px 14px', borderRadius:'999px', zIndex:'9999', fontWeight:'700', boxShadow:'0 10px 25px rgba(0,0,0,.2)'});
+      document.body.appendChild(box); setTimeout(() => box.remove(), 1800);
+    }
+    function openEntryDrawer(){ el.entryDrawer.classList.add('show'); el.entryDrawer.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
+    function closeEntryDrawer(){ el.entryDrawer.classList.remove('show'); el.entryDrawer.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+    function resetForm(){ el.entryForm.reset(); el.editId.value=''; el.submitBtn.textContent='登録する'; const n=new Date(); const y=n.getFullYear(), m=String(n.getMonth()+1).padStart(2,'0'), d=String(n.getDate()).padStart(2,'0'); el.startDate.value=`${y}-${m}-${d}`; el.endDate.value=`${y}-${m}-${d}`; el.startHour.value='10:00'; el.endHour.value='10:00'; el.bathCount.value=''; }
+    function getEntryById(id){ return state.entries.find(x => x.id === id); }
+    function getFormData(){
+      const start = combineDateTime(el.startDate.value, el.startHour.value);
+      const end = combineDateTime(el.endDate.value, el.endHour.value);
+      if (!el.name.value.trim()) { alert('利用者名を入力してください'); return null; }
+      if (!start || !end) { alert('開始日時・終了日時を入力してください'); return null; }
+      if (start > end) { alert('終了日時は開始日時より後にしてください'); return null; }
+      const old = getEntryById(el.editId.value || '') || {};
+      return {
+        id: el.editId.value || crypto.randomUUID(),
+        name: el.name.value.trim(), startDate: el.startDate.value, startHour: el.startHour.value, endDate: el.endDate.value, endHour: el.endHour.value,
+        room: el.room.value.trim(), transportMethod: el.transportMethod.value,
+        mealInfo: el.mealInfo.value.trim(), lastBowelDate: el.lastBowelDate.value, bowelAmount: el.bowelAmount.value, lastBathDate: el.lastBathDate.value,
+        bathCount: el.bathCount.value ? String(el.bathCount.value) : '', stayNote: el.stayNote.value.trim(), note: el.note.value.trim(),
+        checklistCheckin: Array.isArray(old.checklistCheckin) ? old.checklistCheckin : (Array.isArray(old.checklist) ? old.checklist : []),
+        checklistCheckout: Array.isArray(old.checklistCheckout) ? old.checklistCheckout : [], updatedAt: new Date().toISOString()
+      };
+    }
+    function getNameColor(name){ let hash=0; for (let i=0;i<name.length;i++) hash=name.charCodeAt(i)+((hash<<5)-hash); const hue=Math.abs(hash)%360; return {bg:`hsl(${hue} 75% 94%)`, border:`hsl(${hue} 70% 58%)`}; }
+    function getAllCheckItems(){ const fromEntries=state.entries.flatMap(entry => [...(Array.isArray(entry.checklist)?entry.checklist:[]), ...(Array.isArray(entry.checklistCheckin)?entry.checklistCheckin:[]), ...(Array.isArray(entry.checklistCheckout)?entry.checklistCheckout:[])]); return [...new Set([...state.checkItems, ...fromEntries].filter(Boolean))]; }
+    function getUnreturnedItems(entry){ const inList=Array.isArray(entry.checklistCheckin)?entry.checklistCheckin:(Array.isArray(entry.checklist)?entry.checklist:[]); const outList=Array.isArray(entry.checklistCheckout)?entry.checklistCheckout:[]; return inList.filter(item => !outList.includes(item)); }
+    function needsReturnAttention(entry){ return getUnreturnedItems(entry).length > 0; }
+    function entriesForDay(day){ const startDay=startOfDate(day), endDay=endOfDate(day); return state.entries.filter(entry => { const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour); return s <= endDay && e >= startDay; }).sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); }
+    function entriesEndingOnDay(day){ return state.entries.filter(entry => fmtDate(combineDateTime(entry.endDate, entry.endHour)) === fmtDate(day)).sort((a,b)=>combineDateTime(a.endDate,a.endHour)-combineDateTime(b.endDate,b.endHour)); }
+    function getUpcomingCheckoutEntries(){ const today=startOfDate(new Date()); const limit=endOfDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()+UPCOMING_DAYS)); return [...state.entries].filter(entry => { const e=combineDateTime(entry.endDate, entry.endHour); return e >= today && e <= limit; }).sort((a,b)=>combineDateTime(a.endDate,a.endHour)-combineDateTime(b.endDate,b.endHour)); }
+    function renderTopSummaries(){
+      const returnEntries=[...state.entries].filter(needsReturnAttention).sort((a,b)=>combineDateTime(a.endDate,a.endHour)-combineDateTime(b.endDate,b.endHour));
+      el.calendarReturnList.innerHTML = !returnEntries.length ? `<div class="summary-empty">未返却の荷物はありません。</div>` : returnEntries.map(entry => { const missing=getUnreturnedItems(entry); const end=combineDateTime(entry.endDate, entry.endHour); return `<div class="warn-item"><div><div class="warn-name">${escapeHtml(entry.name)}</div><div class="warn-meta">退苑予定: ${fmtDateTime(end)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="warn-meta">未返却: ${escapeHtml(missing.join(' / '))}</div></div><div class="warn-badges"><span class="mini-chip danger">${missing.length}件</span><button class="mini-btn" type="button" onclick="openLuggage('${entry.id}')">荷物確認</button></div></div>`; }).join('');
+      const planned=getUpcomingCheckoutEntries();
+      el.plannedCheckoutList.innerHTML = !planned.length ? `<div class="summary-empty">直近${UPCOMING_DAYS}日以内の退苑予定はありません。</div>` : planned.map(entry => { const end=combineDateTime(entry.endDate, entry.endHour); const diff=daysDiffFloor(new Date(), end); let label='本日'; if (diff===1) label='明日'; if (diff>=2) label=`${diff}日後`; const missing=getUnreturnedItems(entry); return `<div class="planned-item"><div><div class="planned-name">${escapeHtml(entry.name)}</div><div class="planned-meta">${fmtDateTime(end)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="planned-meta">${escapeHtml(entry.transportMethod || '送迎未設定')}</div></div><div class="planned-badges"><span class="mini-chip warn">${label}</span>${missing.length ? `<span class="mini-chip danger">未返却 ${missing.length}</span>` : ''}</div></div>`; }).join('');
+    }
+    function renderCalendar(){
+      const year=state.current.getFullYear(), month=state.current.getMonth();
+      el.monthTitle.textContent=`${year}年 ${month+1}月`; el.monthPicker.value=`${year}-${String(month+1).padStart(2,'0')}`;
+      const first=new Date(year, month, 1), start=new Date(year, month, 1-first.getDay()), todayKey=fmtDate(new Date()), dows=['日','月','火','水','木','金','土'];
+      let html='';
+      dows.forEach((d,i)=>{ const color=i===0?'#dc2626':i===6?'#2563eb':'#475569'; html += `<div class="dow" style="color:${color}">${d}</div>`; });
+      for (let i=0;i<42;i++) {
+        const day=new Date(start); day.setDate(start.getDate()+i);
+        const items=entriesForDay(day), endingToday=entriesEndingOnDay(day), hasReturnAlert=endingToday.some(needsReturnAttention), dayAlertCount=endingToday.filter(needsReturnAttention).length;
+        const mobileNames = items.map(e => { const c=getNameColor(e.name); return `<span class="day-mobile-name" style="background:${c.bg};color:#1f2937;border-left:3px solid ${c.border};">${escapeHtml(e.name)}</span>`; }).join('');
+        html += `<div class="day ${day.getMonth()!==month?'other':''} ${fmtDate(day)===todayKey?'today':''} ${hasReturnAlert?'has-return-alert':''}" onclick="openDayModal('${fmtDate(day)}')"><div class="day-num"><span>${day.getDate()}</span><span class="day-mobile-count">${items.length ? items.length+'件' : ''}</span><span class="muted" style="display:none">${items.length ? items.length+'件' : ''}</span></div>${(hasReturnAlert || endingToday.length) ? `<div class="day-alert-row">${hasReturnAlert ? `<span class="day-alert-badge">未返却 ${dayAlertCount}</span>` : ''}${endingToday.length ? `<span class="day-alert-badge warn">退苑 ${endingToday.length}</span>` : ''}</div>` : ''}<div class="day-badges">${items.map(entry => renderDayEntry(entry, day)).join('')}</div><div class="day-mobile-badges">${mobileNames}${hasReturnAlert?'<span style="font-size:9px;color:#dc2626;font-weight:900;">⚠</span>':''}${endingToday.length?'<span style="font-size:9px;color:#ea580c;font-weight:900;">退</span>':''}</div></div>`;
+      }
+      el.calendar.innerHTML=html; renderTopSummaries();
+    }
+    function renderDayEntry(entry, day){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour), currentMonthYear=`${state.current.getFullYear()}/${String(state.current.getMonth()+1).padStart(2,'0')}`, color=getNameColor(entry.name), missing=getUnreturnedItems(entry), isCheckoutDay=fmtDate(e)===fmtDate(day); return `<div class="entry ${missing.length && isCheckoutDay ? 'return-warning' : ''}" style="background:${color.bg};border-left-color:${color.border};"><div class="entry-head"><div class="name">${escapeHtml(entry.name)}</div>${missing.length && isCheckoutDay ? `<span class="entry-alert">⚠</span>` : ''}</div><div class="meta">${entry.room ? escapeHtml(entry.room)+' / ' : ''}${fmtTime(s)}-${fmtTime(e)}</div><div class="tag-row"><span class="tag in">入 ${fmtDate(s).startsWith(currentMonthYear) ? fmtDate(s).slice(5) : fmtDate(s)}</span><span class="tag out">退 ${fmtDate(e).startsWith(currentMonthYear) ? fmtDate(e).slice(5) : fmtDate(e)}</span>${entry.transportMethod ? `<span class="tag transport">${escapeHtml(entry.transportMethod)}</span>` : ''}${missing.length && isCheckoutDay ? `<span class="tag return">未返却 ${missing.length}</span>` : ''}</div></div>`; }
+    function renderList(){ if (!state.entries.length) { el.listBody.innerHTML=`<tr><td colspan="7" class="empty">まだ登録はありません</td></tr>`; return; } el.listBody.innerHTML=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)).map(entry => { const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour), missing=getUnreturnedItems(entry); return `<tr><td>${escapeHtml(entry.name)}${missing.length ? `<div class="muted" style="color:#b91c1c;font-weight:800;margin-top:4px;">未返却 ${missing.length}件</div>` : ''}</td><td>${fmtDateTime(s)}</td><td>${fmtDateTime(e)}</td><td>${escapeHtml(entry.room || '')}</td><td>${escapeHtml(entry.transportMethod || '')}</td><td>${escapeHtml(entry.note || '')}</td><td class="no-print"><div class="actions"><button class="mini-btn" onclick="editEntry('${entry.id}')">編集</button><button class="mini-btn" onclick="openLuggage('${entry.id}')">荷物</button><button class="mini-btn gray" onclick="openSlip('${entry.id}')">利用票</button><button class="mini-btn delete" onclick="deleteEntry('${entry.id}')">削除</button></div></td></tr>`; }).join(''); }
+    function formatStayPeriod(entry){ return `${fmtDateTime(combineDateTime(entry.startDate, entry.startHour))} 〜 ${fmtDateTime(combineDateTime(entry.endDate, entry.endHour))}`; }
+    function calcUsageDays(entry){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour); return Math.floor((new Date(e.getFullYear(),e.getMonth(),e.getDate()) - new Date(s.getFullYear(),s.getMonth(),s.getDate())) / 86400000) + 1; }
+    function renderChecklistInto(container, items=[], compareItems=null){ const list=getAllCheckItems(); container.innerHTML=list.map(item => { const checked=items.includes(item), disabled=Array.isArray(compareItems) && !compareItems.includes(item); return `<label class="check-item ${checked?'done':''}" ${disabled?'style="opacity:.45"':''}><input type="checkbox" value="${escapeHtmlAttr(item)}" ${checked?'checked':''} ${disabled?'disabled':''}><span>${escapeHtml(item)}</span></label>`; }).join(''); }
+    function getChecklistValuesFrom(container){ return [...container.querySelectorAll('input[type="checkbox"]:checked')].map(x => x.value); }
+    function addCustomLuggageItem(){ const value=(el.newLuggageItem.value||'').trim(); if (!value) { alert('追加したい荷物項目を入力してください'); return; } if (getAllCheckItems().includes(value)) { flash('同じ項目があるため追加しませんでした'); el.newLuggageItem.value=''; return; } state.checkItems=[...new Set([...state.checkItems, value])]; saveCheckItems(); renderLuggageTab(); el.newLuggageItem.value=''; flash('荷物項目を追加しました'); }
+    function renderReturnSummary(entry){ const missing=getUnreturnedItems(entry); if (!missing.length) { el.returnSummary.innerHTML=`<div class="return-summary-title" style="color:#166534">未返却なし</div><div class="return-empty">現在、未返却の荷物はありません。</div>`; el.returnSummary.style.borderColor='#bbf7d0'; el.returnSummary.style.background='#f0fdf4'; return; } el.returnSummary.innerHTML=`<div class="return-summary-title">未返却のもの</div><div class="return-pill-wrap">${missing.map(item => `<span class="return-pill">${escapeHtml(item)}</span>`).join('')}</div>`; el.returnSummary.style.borderColor='#fecaca'; el.returnSummary.style.background='#fff1f2'; }
+    function renderLuggageTab(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.luggageSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.luggageMeta.textContent='荷物チェックを使うには、先に利用者登録をしてください。'; el.luggageCheckinGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.luggageCheckoutGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.returnSummary.innerHTML=''; return; } const currentId=el.luggageSelect.value || sorted[0].id; el.luggageSelect.innerHTML=sorted.map(entry => { const s=combineDateTime(entry.startDate, entry.startHour), missing=getUnreturnedItems(entry); return `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(s)} 入所${missing.length ? ` / 未返却${missing.length}` : ''}</option>`; }).join(''); const entry=sorted.find(x => x.id === (el.luggageSelect.value || currentId)) || sorted[0]; el.luggageSelect.value=entry.id; const checkinList=Array.isArray(entry.checklistCheckin)?entry.checklistCheckin:(Array.isArray(entry.checklist)?entry.checklist:[]), checkoutList=Array.isArray(entry.checklistCheckout)?entry.checklistCheckout:[]; el.luggageMeta.textContent=`対象: ${entry.name}さん / 居室: ${entry.room || '未設定'} / 利用期間: ${formatStayPeriod(entry)}`; renderReturnSummary(entry); renderChecklistInto(el.luggageCheckinGrid, checkinList); renderChecklistInto(el.luggageCheckoutGrid, checkoutList, checkinList); }
+    function renderSlip(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.slipSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.slipContainer.innerHTML='<div class="empty">利用票を作るには、まず利用者を登録してください。</div>'; return; } const currentId=el.slipSelect.value || sorted[0].id; el.slipSelect.innerHTML=sorted.map(entry => `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 入所</option>`).join(''); const entry=sorted.find(x => x.id === (el.slipSelect.value || currentId)) || sorted[0]; el.slipSelect.value=entry.id; const transport=entry.transportMethod || '未設定'; el.slipContainer.innerHTML=`<div class="slip-sheet"><div class="slip-head"><h2 class="slip-title">ショートステイ利用票</h2><div class="slip-sub">ご家族お渡し用</div></div><div class="slip-grid"><div class="slip-row"><div class="slip-label">利用者名</div><div class="slip-value">${escapeHtml(entry.name)}</div></div><div class="slip-row"><div class="slip-label">居室</div><div class="slip-value">${escapeHtml(entry.room || '')}</div></div><div class="slip-row"><div class="slip-label">利用期間</div><div class="slip-value">${formatStayPeriod(entry)}</div></div><div class="slip-row"><div class="slip-label">利用日数</div><div class="slip-value">${calcUsageDays(entry)}日</div></div><div class="slip-row"><div class="slip-label">送迎</div><div class="slip-value">${transport}</div></div><div class="slip-row"><div class="slip-label">作成日</div><div class="slip-value">${fmtDate(new Date())}</div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">お食事について</div><div style="min-height:64px; white-space:pre-wrap;">${escapeHtml(entry.mealInfo || ' ')}</div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">排泄について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終排便日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBowelDate) || '')}</div></div><div class="slip-row"><div class="slip-label">排便量</div><div class="slip-value">${escapeHtml(entry.bowelAmount || '')}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">入浴について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終入浴日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBathDate) || '')}</div></div><div class="slip-row"><div class="slip-label">利用中の回数</div><div class="slip-value">${escapeHtml(entry.bathCount || '')}${entry.bathCount ? '回' : ''}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">利用中の様子</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.stayNote || ' ')}</div></div><div class="slip-box"><div class="section-title" style="font-size:15px; margin-bottom:8px;">備考・申し送り</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.note || ' ')}</div></div><div class="slip-footer"><div><div class="muted">ご家族確認欄</div><div class="sign-line"></div></div><div><div class="muted">施設確認欄</div><div class="sign-line"></div></div></div></div>`; }
+    function renderAll(){ renderCalendar(); renderList(); renderLuggageTab(); renderSlip(); }
+    function saveSilent(){ syncEntriesToDB(); }
+    function escapeHtml(str){ return String(str ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+    function escapeHtmlAttr(str){ return escapeHtml(str).replaceAll('`','&#96;'); }
+    function setupTabs(){ const tabs=document.querySelectorAll('.tab'), panes=['calendarTab','listTab','luggageTab','slipTab'].map(id=>document.getElementById(id)); tabs.forEach(tab => tab.addEventListener('click', () => { tabs.forEach(t=>t.classList.remove('active')); tab.classList.add('active'); panes.forEach(p=>p.classList.add('hidden')); document.getElementById(tab.dataset.tab).classList.remove('hidden'); })); }
+
+    function bindChecklistTap(container) {
+      container.addEventListener('click', (e) => {
+        const label = e.target.closest('.check-item');
+        if (!label) return;
+        const input = label.querySelector('input[type="checkbox"]');
+        if (!input || input.disabled) return;
+        if (e.target !== input) input.checked = !input.checked;
+        label.classList.toggle('done', input.checked);
+      });
+      container.addEventListener('change', (e) => {
+        const input = e.target.closest('input[type="checkbox"]');
+        if (!input) return;
+        const label = input.closest('.check-item');
+        if (label) label.classList.toggle('done', input.checked);
+      });
+    }
+
+    function openLuggage(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="luggageTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('luggageTab').classList.remove('hidden'); el.luggageSelect.value=id; renderLuggageTab(); window.scrollTo({top:0, behavior:'smooth'}); }
+    function openSlip(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="slipTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('slipTab').classList.remove('hidden'); el.slipSelect.value=id; renderSlip(); window.scrollTo({top:0, behavior:'smooth'}); }
+    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.transportMethod.value=entry.transportMethod||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; el.submitBtn.textContent='更新する'; openEntryDrawer(); }
+    function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; state.entries=state.entries.filter(x => x.id!==id); deleteEntryFromDB(id); renderAll(); flash('削除しました'); }
+
+    function openDayModal(dateStr){
+      const day = new Date(dateStr.replace(/\//g,'-') + 'T00:00');
+      const items = entriesForDay(day);
+      const endingToday = entriesEndingOnDay(day);
+      const _dows = ['日','月','火','水','木','金','土'];
+      document.getElementById('dayModalTitle').textContent = `${dateStr} (${_dows[day.getDay()]})`;
+      const body = document.getElementById('dayModalBody');
+      if(!items.length){
+        body.innerHTML = '<div style="color:#64748b;padding:16px 0;text-align:center;">この日の利用者はいません</div>';
+      } else {
+        body.innerHTML = items.map(entry => {
+          const s=combineDateTime(entry.startDate,entry.startHour), e=combineDateTime(entry.endDate,entry.endHour);
+          const missing=getUnreturnedItems(entry), isCheckout=fmtDate(e)===dateStr;
+          const color=getNameColor(entry.name);
+          return `<div style="border:1px solid ${color.border};border-left:6px solid ${color.border};background:${color.bg};border-radius:14px;padding:12px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div style="font-weight:900;font-size:16px;">${escapeHtml(entry.name)}</div>
+              <div style="display:flex;gap:6px;">
+                <button onclick="editEntry('${entry.id}');closeDayModal();" style="border:none;background:#eef2ff;color:#3730a3;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">編集</button>
+                <button onclick="openLuggage('${entry.id}');closeDayModal();" style="border:none;background:#f0fdf4;color:#166534;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">荷物</button>
+              </div>
+            </div>
+            <div style="font-size:13px;color:#475569;margin-top:4px;">${fmtDate(s)} 〜 ${fmtDate(e)}</div>
+            <div style="font-size:12px;color:#64748b;">${entry.room ? escapeHtml(entry.room)+' / ' : ''}${fmtTime(s)} 〜 ${fmtTime(e)}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+              <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">入 ${fmtDate(s).slice(5)}</span>
+              <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">退 ${fmtDate(e).slice(5)}</span>
+              ${entry.transportMethod ? `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">${escapeHtml(entry.transportMethod)}</span>` : ''}
+              ${missing.length && isCheckout ? `<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">⚠未返却 ${missing.length}件</span>` : ''}
+            </div>
+            ${entry.note ? `<div style="font-size:12px;color:#475569;margin-top:6px;background:#fff;border-radius:8px;padding:6px 8px;">${escapeHtml(entry.note)}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+      document.getElementById('dayModal').style.display='block';
+    }
+    function closeDayModal(){
+      document.getElementById('dayModal').style.display='none';
+    }
+    window.openDayModal=openDayModal; window.closeDayModal=closeDayModal;
+
+    window.openLuggage=openLuggage; window.openSlip=openSlip; window.editEntry=editEntry; window.deleteEntry=deleteEntry;
+
+    el.entryForm.addEventListener('submit', e => { e.preventDefault(); const data=getFormData(); if (!data) return; const index=state.entries.findIndex(x => x.id===data.id); if (index >= 0) state.entries[index]=data; else state.entries.push(data); saveSilent(); renderAll(); resetForm(); closeEntryDrawer(); flash(index >= 0 ? '更新しました' : '登録しました'); });
+    el.cancelEditBtn.addEventListener('click', () => { resetForm(); closeEntryDrawer(); });
+    el.saveBtn.addEventListener('click', saveToStorage);
+    el.resetBtn.addEventListener('click', async () => { if (!confirm('全データを削除しますか？')) return; await sb.from('shortstay_entries').delete().neq('id',''); state.entries=[]; renderAll(); resetForm(); flash('全データを削除しました'); });
+    el.exportBtn.addEventListener('click', () => { const blob=new Blob([JSON.stringify({ entries: state.entries, checkItems: state.checkItems }, null, 2)], {type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`shortstay_calendar_v13_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); });
+    el.importFile.addEventListener('change', async e => { const file=e.target.files?.[0]; if (!file) return; try { const parsed=JSON.parse(await file.text()); if (Array.isArray(parsed)) state.entries=parsed; else { state.entries=Array.isArray(parsed.entries)?parsed.entries:[]; if (Array.isArray(parsed.checkItems) && parsed.checkItems.length) state.checkItems=parsed.checkItems; } saveSilent(); renderAll(); flash('読込しました'); } catch { alert('JSON読込に失敗しました'); } finally { e.target.value=''; } });
+    el.prevMonthBtn.addEventListener('click', () => { state.current=new Date(state.current.getFullYear(), state.current.getMonth()-1, 1); renderAll(); });
+    el.nextMonthBtn.addEventListener('click', () => { state.current=new Date(state.current.getFullYear(), state.current.getMonth()+1, 1); renderAll(); });
+    el.todayBtn.addEventListener('click', () => { state.current=new Date(new Date().getFullYear(), new Date().getMonth(), 1); renderAll(); });
+    el.monthPicker.addEventListener('change', () => { if (!el.monthPicker.value) return; const [y,m]=el.monthPicker.value.split('-').map(Number); state.current=new Date(y, m-1, 1); renderAll(); });
+    el.slipSelect.addEventListener('change', renderSlip); el.slipPrintBtn.addEventListener('click', () => window.print()); el.luggageSelect.addEventListener('change', renderLuggageTab);
+    el.luggageSaveBtn.addEventListener('click', () => { const index=state.entries.findIndex(x => x.id===el.luggageSelect.value); if (index < 0) return; state.entries[index].checklistCheckin=getChecklistValuesFrom(el.luggageCheckinGrid); state.entries[index].checklistCheckout=getChecklistValuesFrom(el.luggageCheckoutGrid); state.entries[index].updatedAt=new Date().toISOString(); saveSilent(); renderAll(); flash('入所時・退苑時の荷物チェックを保存しました'); });
+    el.addLuggageItemBtn.addEventListener('click', addCustomLuggageItem); el.newLuggageItem.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); addCustomLuggageItem(); } });
+    el.resetLuggageItemsBtn.addEventListener('click', () => { if (!confirm('追加した荷物項目を初期状態に戻しますか？\n利用者に保存済みのチェック内容は消えません。')) return; state.checkItems=[...DEFAULT_CHECK_ITEMS]; saveCheckItems(); saveSilent(); renderAll(); flash('荷物項目を初期状態に戻しました'); });
+    el.startPreset.addEventListener('change', () => { if (el.startPreset.value) el.startHour.value=el.startPreset.value; });
+    el.endPreset.addEventListener('change', () => { if (el.endPreset.value) el.endHour.value=el.endPreset.value; });
+    el.openEntryBtn.addEventListener('click', () => { resetForm(); openEntryDrawer(); });
+    document.getElementById('dayModalClose').addEventListener('click', closeDayModal);
+    document.getElementById('dayModalBackdrop').addEventListener('click', closeDayModal);
+    el.closeEntryBtn.addEventListener('click', closeEntryDrawer); el.drawerBackdrop.addEventListener('click', closeEntryDrawer); document.addEventListener('keydown', e => { if (e.key==='Escape') closeEntryDrawer(); });
+
+    loadCheckItems(); loadFromStorage().then(() => { resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); }).catch(e => { console.error(e); resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); });
+  </script>
+</body>
+</html>
