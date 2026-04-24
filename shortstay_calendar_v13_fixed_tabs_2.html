@@ -172,17 +172,24 @@
       .wrap{padding:12px 10px 28px;}
       .form-grid,.inline,.inline-3,.slip-grid,.slip-footer{grid-template-columns:1fr;}
       .calendar-shell{padding:10px;}
-      .calendar{grid-template-columns:repeat(7,minmax(44px,1fr));}
-      .dow{font-size:11px;padding:6px 2px;}
-      .day{min-height:96px;border-radius:12px;padding:5px;gap:4px;}
-      .entry{padding:6px 6px;font-size:10px;border-radius:10px;}
-      .entry .name{font-size:10px;}
-      .entry .meta{font-size:9px;}
-      .tag{font-size:9px;padding:1px 5px;}
+      .calendar{grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;}
+      .dow{font-size:10px;padding:4px 1px;}
+      .day{min-height:54px;max-height:54px;border-radius:10px;padding:4px 3px;gap:2px;overflow:hidden;cursor:pointer;}
+      .day-badges{display:none;}
+      .day-alert-row{display:none;}
+      .day-num{font-size:11px;}
       .month-title{font-size:18px;}
       .btn,.tab,.tiny-btn{min-height:50px;}
       .warn-item,.planned-item{flex-direction:column;align-items:flex-start;}
       .warn-badges,.planned-badges{justify-content:flex-start;}
+      .day-mobile-badges{display:flex;flex-direction:column;gap:1px;margin-top:2px;}
+      .day-mobile-dot{display:none;}
+      .day-mobile-name{font-size:9px;font-weight:800;padding:1px 3px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+      .day-mobile-count{font-size:9px;font-weight:800;color:var(--primary);}
+    }
+    @media (min-width: 721px){
+      .day-mobile-badges{display:none;}
+      .day-mobile-count{display:none;}
     }
     @media print{
       body{background:#fff;}
@@ -463,6 +470,19 @@
     </div>
   </div>
 
+
+  <!-- 日付詳細モーダル -->
+  <div id="dayModal" style="display:none;position:fixed;inset:0;z-index:2000;">
+    <div id="dayModalBackdrop" style="position:absolute;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(2px);"></div>
+    <div style="position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-radius:24px 24px 0 0;max-height:80vh;overflow:auto;padding:20px 16px 40px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 id="dayModalTitle" style="font-size:20px;font-weight:900;margin:0;"></h3>
+        <button id="dayModalClose" style="border:none;background:#f1f5f9;border-radius:999px;padding:8px 14px;font-weight:800;cursor:pointer;">閉じる</button>
+      </div>
+      <div id="dayModalBody"></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = 'https://fmnkqxzrfqyfxwsfcuxp.supabase.co';
@@ -571,7 +591,7 @@
     async function loadFromStorage(){
       try {
         const {data: entries, error: e1} = await sb.from('shortstay_entries').select('*').order('start_date');
-        if(!e1 && entries){
+        if(e1){ flash('DBエラー: ' + JSON.stringify(e1)); } else if(entries){
           state.entries = entries.map(r => ({
             id: r.id, name: r.name,
             startDate: r.start_date, startHour: r.start_hour,
@@ -585,9 +605,12 @@
             updatedAt: r.updated_at
           }));
         }
-        const {data: ci, error: e2} = await sb.from('shortstay_check_items').select('items').eq('id',1).single();
+        const {data: ci, error: e2} = await sb.from('shortstay_check_items').select('items').eq('id',1).maybeSingle();
         if(!e2 && ci && Array.isArray(ci.items) && ci.items.length) state.checkItems = ci.items;
-      } catch(e){ console.error(e); }
+      } catch(e){
+        console.error('loadFromStorage error:', JSON.stringify(e));
+        flash('データ読込エラー: ' + (e.message || JSON.stringify(e)));
+      }
     }
 
     function loadCheckItems() { /* DB経由のためloadFromStorageで処理 */ }
@@ -648,7 +671,8 @@
       for (let i=0;i<42;i++) {
         const day=new Date(start); day.setDate(start.getDate()+i);
         const items=entriesForDay(day), endingToday=entriesEndingOnDay(day), hasReturnAlert=endingToday.some(needsReturnAttention), dayAlertCount=endingToday.filter(needsReturnAttention).length;
-        html += `<div class="day ${day.getMonth()!==month?'other':''} ${fmtDate(day)===todayKey?'today':''} ${hasReturnAlert?'has-return-alert':''}"><div class="day-num"><span>${day.getDate()}</span><span class="muted">${items.length ? items.length+'件' : ''}</span></div>${(hasReturnAlert || endingToday.length) ? `<div class="day-alert-row">${hasReturnAlert ? `<span class="day-alert-badge">未返却 ${dayAlertCount}</span>` : ''}${endingToday.length ? `<span class="day-alert-badge warn">退苑 ${endingToday.length}</span>` : ''}</div>` : ''}<div class="day-badges">${items.map(entry => renderDayEntry(entry, day)).join('')}</div></div>`;
+        const mobileNames = items.map(e => { const c=getNameColor(e.name); return `<span class="day-mobile-name" style="background:${c.bg};color:#1f2937;border-left:3px solid ${c.border};">${escapeHtml(e.name)}</span>`; }).join('');
+        html += `<div class="day ${day.getMonth()!==month?'other':''} ${fmtDate(day)===todayKey?'today':''} ${hasReturnAlert?'has-return-alert':''}" onclick="openDayModal('${fmtDate(day)}')"><div class="day-num"><span>${day.getDate()}</span><span class="day-mobile-count">${items.length ? items.length+'件' : ''}</span><span class="muted" style="display:none">${items.length ? items.length+'件' : ''}</span></div>${(hasReturnAlert || endingToday.length) ? `<div class="day-alert-row">${hasReturnAlert ? `<span class="day-alert-badge">未返却 ${dayAlertCount}</span>` : ''}${endingToday.length ? `<span class="day-alert-badge warn">退苑 ${endingToday.length}</span>` : ''}</div>` : ''}<div class="day-badges">${items.map(entry => renderDayEntry(entry, day)).join('')}</div><div class="day-mobile-badges">${mobileNames}${hasReturnAlert?'<span style="font-size:9px;color:#dc2626;font-weight:900;">⚠</span>':''}${endingToday.length?'<span style="font-size:9px;color:#ea580c;font-weight:900;">退</span>':''}</div></div>`;
       }
       el.calendar.innerHTML=html; renderTopSummaries();
     }
@@ -689,6 +713,48 @@
     function openSlip(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="slipTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('slipTab').classList.remove('hidden'); el.slipSelect.value=id; renderSlip(); window.scrollTo({top:0, behavior:'smooth'}); }
     function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.transportMethod.value=entry.transportMethod||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; el.submitBtn.textContent='更新する'; openEntryDrawer(); }
     function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; state.entries=state.entries.filter(x => x.id!==id); deleteEntryFromDB(id); renderAll(); flash('削除しました'); }
+
+    function openDayModal(dateStr){
+      const day = new Date(dateStr.replace(/\//g,'-') + 'T00:00');
+      const items = entriesForDay(day);
+      const endingToday = entriesEndingOnDay(day);
+      const _dows = ['日','月','火','水','木','金','土'];
+      document.getElementById('dayModalTitle').textContent = `${dateStr} (${_dows[day.getDay()]})`;
+      const body = document.getElementById('dayModalBody');
+      if(!items.length){
+        body.innerHTML = '<div style="color:#64748b;padding:16px 0;text-align:center;">この日の利用者はいません</div>';
+      } else {
+        body.innerHTML = items.map(entry => {
+          const s=combineDateTime(entry.startDate,entry.startHour), e=combineDateTime(entry.endDate,entry.endHour);
+          const missing=getUnreturnedItems(entry), isCheckout=fmtDate(e)===dateStr;
+          const color=getNameColor(entry.name);
+          return `<div style="border:1px solid ${color.border};border-left:6px solid ${color.border};background:${color.bg};border-radius:14px;padding:12px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div style="font-weight:900;font-size:16px;">${escapeHtml(entry.name)}</div>
+              <div style="display:flex;gap:6px;">
+                <button onclick="editEntry('${entry.id}');closeDayModal();" style="border:none;background:#eef2ff;color:#3730a3;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">編集</button>
+                <button onclick="openLuggage('${entry.id}');closeDayModal();" style="border:none;background:#f0fdf4;color:#166534;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">荷物</button>
+              </div>
+            </div>
+            <div style="font-size:13px;color:#475569;margin-top:4px;">${fmtDate(s)} 〜 ${fmtDate(e)}</div>
+            <div style="font-size:12px;color:#64748b;">${entry.room ? escapeHtml(entry.room)+' / ' : ''}${fmtTime(s)} 〜 ${fmtTime(e)}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+              <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">入 ${fmtDate(s).slice(5)}</span>
+              <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">退 ${fmtDate(e).slice(5)}</span>
+              ${entry.transportMethod ? `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">${escapeHtml(entry.transportMethod)}</span>` : ''}
+              ${missing.length && isCheckout ? `<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">⚠未返却 ${missing.length}件</span>` : ''}
+            </div>
+            ${entry.note ? `<div style="font-size:12px;color:#475569;margin-top:6px;background:#fff;border-radius:8px;padding:6px 8px;">${escapeHtml(entry.note)}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+      document.getElementById('dayModal').style.display='block';
+    }
+    function closeDayModal(){
+      document.getElementById('dayModal').style.display='none';
+    }
+    window.openDayModal=openDayModal; window.closeDayModal=closeDayModal;
+
     window.openLuggage=openLuggage; window.openSlip=openSlip; window.editEntry=editEntry; window.deleteEntry=deleteEntry;
 
     el.entryForm.addEventListener('submit', e => { e.preventDefault(); const data=getFormData(); if (!data) return; const index=state.entries.findIndex(x => x.id===data.id); if (index >= 0) state.entries[index]=data; else state.entries.push(data); saveSilent(); renderAll(); resetForm(); closeEntryDrawer(); flash(index >= 0 ? '更新しました' : '登録しました'); });
@@ -708,9 +774,11 @@
     el.startPreset.addEventListener('change', () => { if (el.startPreset.value) el.startHour.value=el.startPreset.value; });
     el.endPreset.addEventListener('change', () => { if (el.endPreset.value) el.endHour.value=el.endPreset.value; });
     el.openEntryBtn.addEventListener('click', () => { resetForm(); openEntryDrawer(); });
+    document.getElementById('dayModalClose').addEventListener('click', closeDayModal);
+    document.getElementById('dayModalBackdrop').addEventListener('click', closeDayModal);
     el.closeEntryBtn.addEventListener('click', closeEntryDrawer); el.drawerBackdrop.addEventListener('click', closeEntryDrawer); document.addEventListener('keydown', e => { if (e.key==='Escape') closeEntryDrawer(); });
 
-    loadCheckItems(); loadFromStorage().then(() => { resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); });
+    loadCheckItems(); loadFromStorage().then(() => { resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); }).catch(e => { console.error(e); resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); });
   </script>
 </body>
 </html>
