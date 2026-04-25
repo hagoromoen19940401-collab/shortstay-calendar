@@ -52,7 +52,7 @@
     .calendar-large .entry{font-size:12px;}
     .calendar-large .entry .name{font-size:12px;}
     .calendar-large .entry .meta{font-size:11px;}
-    .entry-drawer{position:fixed;inset:0;z-index:1200;display:none;}
+    .entry-drawer{position:fixed;inset:0;z-index:3000;display:none;}
     .entry-drawer.show{display:block;}
     .drawer-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(2px);}
     .drawer-panel{
@@ -567,8 +567,8 @@
       startUndecidedBtn: document.getElementById('startUndecidedBtn'),
       endUndecidedBtn: document.getElementById('endUndecidedBtn'),
       room: document.getElementById('room'),
-      transportCheckin: document.getElementById('transportCheckin'),
-      transportCheckout: document.getElementById('transportCheckout'),
+      transportCheckin: document.getElementById('transportCheckin')||{value:''},
+      transportCheckout: document.getElementById('transportCheckout')||{value:''},
 
       mealInfo: document.getElementById('mealInfo'),
       lastBowelDate: document.getElementById('lastBowelDate'),
@@ -824,7 +824,7 @@
 
     function openLuggage(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="luggageTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('luggageTab').classList.remove('hidden'); el.luggageSelect.value=id; renderLuggageTab(); window.scrollTo({top:0, behavior:'smooth'}); }
     function openSlip(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="slipTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('slipTab').classList.remove('hidden'); el.slipSelect.value=id; renderSlip(); window.scrollTo({top:0, behavior:'smooth'}); }
-    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.transportCheckin.value=entry.transportCheckin||entry.transportMethod||''; el.transportCheckout.value=entry.transportCheckout||''; el.startPreset.value=entry.transportCheckin||entry.transportMethod||''; el.endPreset.value=entry.transportCheckout||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; setUndecided('start', !!entry.startUndecided); setUndecided('end', !!entry.endUndecided); el.submitBtn.textContent='更新する'; openEntryDrawer(); }
+    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; if(el.transportCheckin) el.transportCheckin.value=entry.transportCheckin||entry.transportMethod||''; if(el.transportCheckout) el.transportCheckout.value=entry.transportCheckout||''; el.startPreset.value=entry.transportCheckin||entry.transportMethod||''; el.endPreset.value=entry.transportCheckout||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; setUndecided('start', !!entry.startUndecided); setUndecided('end', !!entry.endUndecided); el.submitBtn.textContent='更新する'; openEntryDrawer(); }
     function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; state.entries=state.entries.filter(x => x.id!==id); deleteEntryFromDB(id); renderAll(); flash('削除しました'); }
 
     function openDayModal(dateStr){
@@ -845,7 +845,7 @@
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
               <div style="font-weight:900;font-size:16px;">${escapeHtml(entry.name)}</div>
               <div style="display:flex;gap:6px;">
-                <button onclick="editEntry('${entry.id}');closeDayModal();" style="border:none;background:#eef2ff;color:#3730a3;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">編集</button>
+                <button onclick="closeDayModal();window.editEntry('${entry.id}');" style="border:none;background:#eef2ff;color:#3730a3;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">編集</button>
                 <button onclick="openLuggage('${entry.id}');closeDayModal();" style="border:none;background:#f0fdf4;color:#166534;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">荷物</button>
                 <button onclick="deleteEntry('${entry.id}');closeDayModal();" style="border:none;background:#fee2e2;color:#991b1b;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">削除</button>
               </div>
@@ -869,7 +869,6 @@
     }
     window.openDayModal=openDayModal; window.closeDayModal=closeDayModal; window.deleteEntry=deleteEntry; window.editEntry=editEntry; window.openLuggage=openLuggage; window.openSlip=openSlip;
 
-    window.openLuggage=openLuggage; window.openSlip=openSlip; window.editEntry=editEntry; window.deleteEntry=deleteEntry;
 
     el.entryForm.addEventListener('submit', e => { e.preventDefault(); const data=getFormData(); if (!data) return; const index=state.entries.findIndex(x => x.id===data.id); if (index >= 0) state.entries[index]=data; else state.entries.push(data); saveSilent(); renderAll(); closeEntryDrawer(); resetForm(); flash(index >= 0 ? '更新しました' : '登録しました'); });
     el.cancelEditBtn.addEventListener('click', () => { resetForm(); closeEntryDrawer(); });
