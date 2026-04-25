@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <title>ショートステイ利用カレンダー V13</title>
+  <title>はごろも苑ショートステイ利用カレンダー</title>
   <style>
     :root{
       --bg:#f4f7fb;
@@ -78,7 +78,10 @@
     }
     textarea{min-height:96px;resize:vertical;}
     .inline{display:grid;grid-template-columns:1fr 120px;gap:8px;}
-    .inline-3{display:grid;grid-template-columns:1fr 110px 110px;gap:8px;}
+    .inline-4{display:grid;grid-template-columns:1fr 90px auto 110px;gap:8px;}
+    .time-undecided input[type="time"]{opacity:.35;pointer-events:none;}
+    .btn-undecided{border:none;border-radius:12px;padding:0 10px;font-weight:700;cursor:pointer;min-height:48px;font-size:12px;white-space:nowrap;background:#f1f5f9;color:#334155;}
+    .btn-undecided.active{background:#fef3c7;color:#92400e;}
     .form-actions{display:flex;gap:8px;flex-wrap:wrap;padding-top:4px;}
     .calendar-shell{padding:12px;}
     .calendar-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
@@ -192,17 +195,68 @@
       .day-mobile-count{display:none;}
     }
     @media print{
-      body{background:#fff;}
-      .toolbar,.tabs,.entry-drawer,.list-tools,.actions,.mini-btn,.no-print,.calendar-summary-grid{display:none !important;}
-      .wrap{max-width:none;padding:0;}
-      .grid{display:block;}
-      .card{box-shadow:none;border:0;border-radius:0;}
-      .calendar-shell{padding:0;}
-      .day{break-inside:avoid;min-height:110px;}
-      #calendarTab,#listTab,#luggageTab{display:none !important;}
-      #slipTab.hidden{display:block !important;}
-      .slip-card{border:0;padding:0;}
-      .slip-sheet{border:0;padding:0;}
+      @page { size: A4 portrait; margin: 8mm; }
+      body { background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      /* 共通非表示 */
+      .toolbar,.tabs,.entry-drawer,.list-tools,.actions,.mini-btn,.no-print,
+      .calendar-summary-grid,.calendar-nav,.hero .sub { display:none !important; }
+      .wrap { max-width:none; padding:0; }
+      .card { box-shadow:none; border:0; border-radius:0; }
+      .hero { padding:4px 8px; border-radius:0; }
+      .title { font-size:14px !important; }
+
+      /* ── カレンダー印刷モード ── */
+      body.print-calendar #calendarTab  { display:block !important; }
+      body.print-calendar #listTab,
+      body.print-calendar #luggageTab,
+      body.print-calendar #slipTab      { display:none !important; }
+
+      body.print-calendar .calendar-shell { padding:0; }
+      body.print-calendar .calendar-grid  {
+        display:grid !important;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        width: 100%;
+      }
+      body.print-calendar .dow            { font-size:8px; padding:1px 2px; text-align:center; }
+      body.print-calendar .day            {
+        break-inside: avoid;
+        min-height: 34mm;
+        padding: 2px;
+        font-size: 7px;
+        overflow: hidden;
+        border: 0.3px solid #d1d5db;
+      }
+      body.print-calendar .day.other      { background:#f8fafc; }
+      body.print-calendar .day-num span:first-child { font-size:9px; font-weight:700; }
+      body.print-calendar .day-mobile-count,
+      body.print-calendar .day-alert-row  { display:none !important; }
+      body.print-calendar .day-mobile-badges { display:none !important; }
+      body.print-calendar .day-badges     { display:block !important; }
+
+      body.print-calendar .entry {
+        padding: 1px 3px;
+        margin-bottom: 1px;
+        font-size: 7px;
+        line-height: 1.2;
+        border-radius: 2px;
+        position: relative;
+      }
+      body.print-calendar .entry .name   { font-size:7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      body.print-calendar .entry .meta   { font-size:6px; }
+      body.print-calendar .entry .tag-row { display:none; }
+      body.print-calendar .entry[style*="padding-bottom"] { padding-bottom:13px !important; }
+      body.print-calendar .entry span[style*="position:absolute"] {
+        font-size:6px !important; padding:1px 3px !important; bottom:1px !important; border-radius:2px !important;
+      }
+
+      /* ── 利用票印刷モード（従来） ── */
+      body:not(.print-calendar) #calendarTab,
+      body:not(.print-calendar) #listTab,
+      body:not(.print-calendar) #luggageTab { display:none !important; }
+      body:not(.print-calendar) #slipTab.hidden { display:block !important; }
+      body:not(.print-calendar) .slip-card { border:0; padding:0; }
+      body:not(.print-calendar) .slip-sheet { border:0; padding:0; }
     }
   </style>
 </head>
@@ -210,7 +264,7 @@
   <div class="wrap">
     <div class="hero">
       <div>
-        <h1 class="title">ショートステイ利用カレンダー V13</h1>
+        <h1 class="title">はごろも苑ショートステイ利用カレンダー</h1>
         <div class="sub">カレンダー広め表示＋未返却の視覚表示＋退苑予定者の見落とし防止</div>
       </div>
       <div class="toolbar no-print">
@@ -218,7 +272,6 @@
         <button class="btn" id="exportBtn">書き出し</button>
         <label class="btn" for="importFile">読込</label>
         <input id="importFile" type="file" accept="application/json" class="hidden" />
-        <button class="btn" onclick="window.print()">印刷</button>
         <button class="btn danger" id="resetBtn">全消去</button>
       </div>
     </div>
@@ -254,35 +307,31 @@
                   </div>
 
                   <div class="field full">
-                    <label>開始日時</label>
-                    <div class="inline-3">
+                    <label>入苑日時</label>
+                    <div class="inline-4" id="startRow">
                       <input id="startDate" type="date" required />
                       <input id="startHour" type="time" step="900" value="10:00" required />
+                      <button type="button" class="btn-undecided" id="startUndecidedBtn">未定</button>
                       <select id="startPreset">
-                        <option value="">時間補助</option>
-                        <option value="09:00">09:00</option>
-                        <option value="10:00">10:00</option>
-                        <option value="11:00">11:00</option>
-                        <option value="13:00">13:00</option>
-                        <option value="14:00">14:00</option>
-                        <option value="15:00">15:00</option>
+                        <option value="">送迎選択</option>
+                        <option value="施設迎え">施設迎え</option>
+                        <option value="家族送迎">家族送迎</option>
+                        <option value="その他">その他</option>
                       </select>
                     </div>
                   </div>
 
                   <div class="field full">
-                    <label>終了日時</label>
-                    <div class="inline-3">
+                    <label>退苑日時</label>
+                    <div class="inline-4" id="endRow">
                       <input id="endDate" type="date" required />
                       <input id="endHour" type="time" step="900" value="10:00" required />
+                      <button type="button" class="btn-undecided" id="endUndecidedBtn">未定</button>
                       <select id="endPreset">
-                        <option value="">時間補助</option>
-                        <option value="09:00">09:00</option>
-                        <option value="10:00">10:00</option>
-                        <option value="11:00">11:00</option>
-                        <option value="13:00">13:00</option>
-                        <option value="14:00">14:00</option>
-                        <option value="15:00">15:00</option>
+                        <option value="">送迎選択</option>
+                        <option value="施設迎え">施設迎え</option>
+                        <option value="家族送迎">家族送迎</option>
+                        <option value="その他">その他</option>
                       </select>
                     </div>
                   </div>
@@ -369,6 +418,7 @@
               <div class="calendar-nav">
                 <input class="no-print" id="monthPicker" type="month" />
                 <button class="btn soft no-print" id="todayBtn">今月へ</button>
+                <button class="btn no-print" id="calPrintBtn" style="background:#16a34a;color:#fff;">🖨️ 印刷</button>
               </div>
             </div>
 
@@ -497,7 +547,9 @@
     const state = {
       entries: [],
       checkItems: [...DEFAULT_CHECK_ITEMS],
-      current: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      current: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      startUndecided: false,
+      endUndecided: false
     };
 
     const el = {
@@ -510,6 +562,8 @@
       endHour: document.getElementById('endHour'),
       startPreset: document.getElementById('startPreset'),
       endPreset: document.getElementById('endPreset'),
+      startUndecidedBtn: document.getElementById('startUndecidedBtn'),
+      endUndecidedBtn: document.getElementById('endUndecidedBtn'),
       room: document.getElementById('room'),
       transportMethod: document.getElementById('transportMethod'),
 
@@ -576,6 +630,7 @@
           bath_count: e.bathCount||'', stay_note: e.stayNote||'', note: e.note||'',
           checklist_checkin: e.checklistCheckin||[],
           checklist_checkout: e.checklistCheckout||[],
+          start_undecided: !!e.startUndecided, end_undecided: !!e.endUndecided,
           updated_at: e.updatedAt||new Date().toISOString()
         }));
         const {error} = await sb.from('shortstay_entries').upsert(rows);
@@ -602,6 +657,7 @@
             bathCount: r.bath_count||'', stayNote: r.stay_note||'', note: r.note||'',
             checklistCheckin: r.checklist_checkin||[],
             checklistCheckout: r.checklist_checkout||[],
+            startUndecided: !!r.start_undecided, endUndecided: !!r.end_undecided,
             updatedAt: r.updated_at
           }));
         }
@@ -617,6 +673,7 @@
     function combineDateTime(date, time) { if (!date) return null; return new Date(`${date}T${time || '00:00'}`); }
     function fmtDate(date) { return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`; }
     function fmtTime(date) { return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`; }
+    function fmtTimeEntry(entry, which){ if(which==='start' && entry.startUndecided) return '未定'; if(which==='end' && entry.endUndecided) return '未定'; const d=combineDateTime(which==='start'?entry.startDate:entry.endDate, which==='start'?entry.startHour:entry.endHour); return d?fmtTime(d):''; }
     function fmtDateTime(date) { return `${fmtDate(date)} ${fmtTime(date)}`; }
     function fmtYmd(dateString) { if (!dateString) return ''; const d = new Date(`${dateString}T00:00`); return Number.isNaN(d.getTime()) ? dateString : fmtDate(d); }
     function startOfDate(date) { return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0); }
@@ -630,7 +687,11 @@
     }
     function openEntryDrawer(){ el.entryDrawer.classList.add('show'); el.entryDrawer.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
     function closeEntryDrawer(){ el.entryDrawer.classList.remove('show'); el.entryDrawer.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
-    function resetForm(){ el.entryForm.reset(); el.editId.value=''; el.submitBtn.textContent='登録する'; const n=new Date(); const y=n.getFullYear(), m=String(n.getMonth()+1).padStart(2,'0'), d=String(n.getDate()).padStart(2,'0'); el.startDate.value=`${y}-${m}-${d}`; el.endDate.value=`${y}-${m}-${d}`; el.startHour.value='10:00'; el.endHour.value='10:00'; el.bathCount.value=''; }
+    function setUndecided(which, flag){
+      if(which==='start'){ state.startUndecided=flag; el.startUndecidedBtn.classList.toggle('active',flag); document.getElementById('startRow').classList.toggle('time-undecided',flag); if(flag) el.startHour.value='00:00'; }
+      else { state.endUndecided=flag; el.endUndecidedBtn.classList.toggle('active',flag); document.getElementById('endRow').classList.toggle('time-undecided',flag); if(flag) el.endHour.value='00:00'; }
+    }
+    function resetForm(){ el.entryForm.reset(); el.editId.value=''; el.submitBtn.textContent='登録する'; const n=new Date(); const y=n.getFullYear(), m=String(n.getMonth()+1).padStart(2,'0'), d=String(n.getDate()).padStart(2,'0'); el.startDate.value=`${y}-${m}-${d}`; el.endDate.value=`${y}-${m}-${d}`; el.startHour.value='10:00'; el.endHour.value='10:00'; el.bathCount.value=''; setUndecided('start',false); setUndecided('end',false); }
     function getEntryById(id){ return state.entries.find(x => x.id === id); }
     function getFormData(){
       const start = combineDateTime(el.startDate.value, el.startHour.value);
@@ -646,7 +707,8 @@
         mealInfo: el.mealInfo.value.trim(), lastBowelDate: el.lastBowelDate.value, bowelAmount: el.bowelAmount.value, lastBathDate: el.lastBathDate.value,
         bathCount: el.bathCount.value ? String(el.bathCount.value) : '', stayNote: el.stayNote.value.trim(), note: el.note.value.trim(),
         checklistCheckin: Array.isArray(old.checklistCheckin) ? old.checklistCheckin : (Array.isArray(old.checklist) ? old.checklist : []),
-        checklistCheckout: Array.isArray(old.checklistCheckout) ? old.checklistCheckout : [], updatedAt: new Date().toISOString()
+        checklistCheckout: Array.isArray(old.checklistCheckout) ? old.checklistCheckout : [], updatedAt: new Date().toISOString(),
+        startUndecided: state.startUndecided, endUndecided: state.endUndecided
       };
     }
     function getNameColor(name){ let hash=0; for (let i=0;i<name.length;i++) hash=name.charCodeAt(i)+((hash<<5)-hash); const hue=Math.abs(hash)%360; return {bg:`hsl(${hue} 75% 94%)`, border:`hsl(${hue} 70% 58%)`}; }
@@ -658,9 +720,9 @@
     function getUpcomingCheckoutEntries(){ const today=startOfDate(new Date()); const limit=endOfDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()+UPCOMING_DAYS)); return [...state.entries].filter(entry => { const e=combineDateTime(entry.endDate, entry.endHour); return e >= today && e <= limit; }).sort((a,b)=>combineDateTime(a.endDate,a.endHour)-combineDateTime(b.endDate,b.endHour)); }
     function renderTopSummaries(){
       const returnEntries=[...state.entries].filter(needsReturnAttention).sort((a,b)=>combineDateTime(a.endDate,a.endHour)-combineDateTime(b.endDate,b.endHour));
-      el.calendarReturnList.innerHTML = !returnEntries.length ? `<div class="summary-empty">未返却の荷物はありません。</div>` : returnEntries.map(entry => { const missing=getUnreturnedItems(entry); const end=combineDateTime(entry.endDate, entry.endHour); return `<div class="warn-item"><div><div class="warn-name">${escapeHtml(entry.name)}</div><div class="warn-meta">退苑予定: ${fmtDateTime(end)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="warn-meta">未返却: ${escapeHtml(missing.join(' / '))}</div></div><div class="warn-badges"><span class="mini-chip danger">${missing.length}件</span><button class="mini-btn" type="button" onclick="openLuggage('${entry.id}')">荷物確認</button></div></div>`; }).join('');
+      el.calendarReturnList.innerHTML = !returnEntries.length ? `<div class="summary-empty">未返却の荷物はありません。</div>` : returnEntries.map(entry => { const missing=getUnreturnedItems(entry); const end=combineDateTime(entry.endDate, entry.endHour); return `<div class="warn-item"><div><div class="warn-name">${escapeHtml(entry.name)}</div><div class="warn-meta">退苑予定: ${fmtDateTime(end)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="warn-meta">未返却: ${escapeHtml(missing.join(' / '))}</div></div><div class="warn-badges"><span class="mini-chip danger">${missing.length}件</span><button class="mini-btn" type="button" onclick="openLuggage('${entry.id}')">荷物確認</button>${isCheckoutDay ? `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span></div>` : ''}</div></div>`; }).join('');
       const planned=getUpcomingCheckoutEntries();
-      el.plannedCheckoutList.innerHTML = !planned.length ? `<div class="summary-empty">直近${UPCOMING_DAYS}日以内の退苑予定はありません。</div>` : planned.map(entry => { const end=combineDateTime(entry.endDate, entry.endHour); const diff=daysDiffFloor(new Date(), end); let label='本日'; if (diff===1) label='明日'; if (diff>=2) label=`${diff}日後`; const missing=getUnreturnedItems(entry); return `<div class="planned-item"><div><div class="planned-name">${escapeHtml(entry.name)}</div><div class="planned-meta">${fmtDateTime(end)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="planned-meta">${escapeHtml(entry.transportMethod || '送迎未設定')}</div></div><div class="planned-badges"><span class="mini-chip warn">${label}</span>${missing.length ? `<span class="mini-chip danger">未返却 ${missing.length}</span>` : ''}</div></div>`; }).join('');
+      el.plannedCheckoutList.innerHTML = !planned.length ? `<div class="summary-empty">直近${UPCOMING_DAYS}日以内の退苑予定はありません。</div>` : planned.map(entry => { const end=combineDateTime(entry.endDate, entry.endHour); const diff=daysDiffFloor(new Date(), end); let label='本日'; if (diff===1) label='明日'; if (diff>=2) label=`${diff}日後`; const missing=getUnreturnedItems(entry); return `<div class="planned-item"><div><div class="planned-name">${escapeHtml(entry.name)}</div><div class="planned-meta">${fmtDateTime(end)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="planned-meta">${escapeHtml(entry.transportMethod || '送迎未設定')}</div></div><div class="planned-badges"><span class="mini-chip warn">${label}</span>${missing.length ? `<span class="mini-chip danger">未返却 ${missing.length}</span>` : ''}${isCheckoutDay ? `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span></div>` : ''}</div></div>`; }).join('');
     }
     function renderCalendar(){
       const year=state.current.getFullYear(), month=state.current.getMonth();
@@ -670,13 +732,17 @@
       dows.forEach((d,i)=>{ const color=i===0?'#dc2626':i===6?'#2563eb':'#475569'; html += `<div class="dow" style="color:${color}">${d}</div>`; });
       for (let i=0;i<42;i++) {
         const day=new Date(start); day.setDate(start.getDate()+i);
+        if(day.getMonth()!==month){
+          html += `<div class="day other" style="background:#f1f5f9;border-color:#e9eef4;pointer-events:none;"></div>`;
+          continue;
+        }
         const items=entriesForDay(day), endingToday=entriesEndingOnDay(day), hasReturnAlert=endingToday.some(needsReturnAttention), dayAlertCount=endingToday.filter(needsReturnAttention).length;
-        const mobileNames = items.map(e => { const c=getNameColor(e.name); return `<span class="day-mobile-name" style="background:${c.bg};color:#1f2937;border-left:3px solid ${c.border};">${escapeHtml(e.name)}</span>`; }).join('');
-        html += `<div class="day ${day.getMonth()!==month?'other':''} ${fmtDate(day)===todayKey?'today':''} ${hasReturnAlert?'has-return-alert':''}" onclick="openDayModal('${fmtDate(day)}')"><div class="day-num"><span>${day.getDate()}</span><span class="day-mobile-count">${items.length ? items.length+'件' : ''}</span><span class="muted" style="display:none">${items.length ? items.length+'件' : ''}</span></div>${(hasReturnAlert || endingToday.length) ? `<div class="day-alert-row">${hasReturnAlert ? `<span class="day-alert-badge">未返却 ${dayAlertCount}</span>` : ''}${endingToday.length ? `<span class="day-alert-badge warn">退苑 ${endingToday.length}</span>` : ''}</div>` : ''}<div class="day-badges">${items.map(entry => renderDayEntry(entry, day)).join('')}</div><div class="day-mobile-badges">${mobileNames}${hasReturnAlert?'<span style="font-size:9px;color:#dc2626;font-weight:900;">⚠</span>':''}${endingToday.length?'<span style="font-size:9px;color:#ea580c;font-weight:900;">退</span>':''}</div></div>`;
+        const mobileNames = items.map(e => { const c=getNameColor(e.name); const eEnd=combineDateTime(e.endDate,e.endHour); const eStart=combineDateTime(e.startDate,e.startHour); const isMobileCheckout=fmtDate(eEnd)===fmtDate(day); const isMobileCheckin=fmtDate(eStart)===fmtDate(day); return `<span class="day-mobile-name" style="background:${c.bg};color:#1f2937;border-left:3px solid ${c.border};">${isMobileCheckin?'【入】':''}${escapeHtml(e.name)}${isMobileCheckout?'【退】':''}</span>`; }).join('');
+        html += `<div class="day ${fmtDate(day)===todayKey?'today':''} ${hasReturnAlert?'has-return-alert':''}" onclick="openDayModal('${fmtDate(day)}')"><div class="day-num"><span>${day.getDate()}</span><span class="day-mobile-count">${items.length ? items.length+'件' : ''}</span><span class="muted" style="display:none">${items.length ? items.length+'件' : ''}</span></div>${hasReturnAlert ? `<div class="day-alert-row"><span class="day-alert-badge">未返却 ${dayAlertCount}</span></div>` : ''}<div class="day-badges">${items.map(entry => renderDayEntry(entry, day)).join('')}</div><div class="day-mobile-badges">${mobileNames}${hasReturnAlert?'<span style="font-size:9px;color:#dc2626;font-weight:900;">⚠</span>':''}</div></div>`;
       }
       el.calendar.innerHTML=html; renderTopSummaries();
     }
-    function renderDayEntry(entry, day){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour), currentMonthYear=`${state.current.getFullYear()}/${String(state.current.getMonth()+1).padStart(2,'0')}`, color=getNameColor(entry.name), missing=getUnreturnedItems(entry), isCheckoutDay=fmtDate(e)===fmtDate(day); return `<div class="entry ${missing.length && isCheckoutDay ? 'return-warning' : ''}" style="background:${color.bg};border-left-color:${color.border};"><div class="entry-head"><div class="name">${escapeHtml(entry.name)}</div>${missing.length && isCheckoutDay ? `<span class="entry-alert">⚠</span>` : ''}</div><div class="meta">${entry.room ? escapeHtml(entry.room)+' / ' : ''}${fmtTime(s)}-${fmtTime(e)}</div><div class="tag-row"><span class="tag in">入 ${fmtDate(s).startsWith(currentMonthYear) ? fmtDate(s).slice(5) : fmtDate(s)}</span><span class="tag out">退 ${fmtDate(e).startsWith(currentMonthYear) ? fmtDate(e).slice(5) : fmtDate(e)}</span>${entry.transportMethod ? `<span class="tag transport">${escapeHtml(entry.transportMethod)}</span>` : ''}${missing.length && isCheckoutDay ? `<span class="tag return">未返却 ${missing.length}</span>` : ''}</div></div>`; }
+    function renderDayEntry(entry, day){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour), currentMonthYear=`${state.current.getFullYear()}/${String(state.current.getMonth()+1).padStart(2,'0')}`, color=getNameColor(entry.name), missing=getUnreturnedItems(entry), isCheckoutDay=fmtDate(e)===fmtDate(day), isCheckinDay=fmtDate(s)===fmtDate(day); return `<div class="entry ${missing.length && isCheckoutDay ? 'return-warning' : ''}" style="background:${color.bg};border-left-color:${color.border};position:relative;${(isCheckoutDay||isCheckinDay)?'padding-bottom:28px;':''}"><div class="entry-head"><div class="name">${escapeHtml(entry.name)}</div>${missing.length && isCheckoutDay ? `<span class="entry-alert">⚠</span>` : ''}</div><div class="meta">${entry.room ? escapeHtml(entry.room)+' / ' : ''}${fmtTimeEntry(entry,'start')}-${fmtTimeEntry(entry,'end')}</div><div class="tag-row"><span class="tag in">入 ${fmtDate(s).startsWith(currentMonthYear) ? fmtDate(s).slice(5) : fmtDate(s)}</span><span class="tag out">退 ${fmtDate(e).startsWith(currentMonthYear) ? fmtDate(e).slice(5) : fmtDate(e)}</span>${entry.transportMethod ? `<span class="tag transport">${escapeHtml(entry.transportMethod)}</span>` : ''}${missing.length && isCheckoutDay ? `<span class="tag return">未返却 ${missing.length}</span>` : ''}</div>${isCheckinDay ? `<span style="position:absolute;bottom:5px;left:6px;display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#16a34a;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🌿 入苑</span>` : ''}${isCheckoutDay ? `<span style="position:absolute;bottom:5px;right:6px;display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span>` : ''}</div>`; }
     function renderList(){ if (!state.entries.length) { el.listBody.innerHTML=`<tr><td colspan="7" class="empty">まだ登録はありません</td></tr>`; return; } el.listBody.innerHTML=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)).map(entry => { const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour), missing=getUnreturnedItems(entry); return `<tr><td>${escapeHtml(entry.name)}${missing.length ? `<div class="muted" style="color:#b91c1c;font-weight:800;margin-top:4px;">未返却 ${missing.length}件</div>` : ''}</td><td>${fmtDateTime(s)}</td><td>${fmtDateTime(e)}</td><td>${escapeHtml(entry.room || '')}</td><td>${escapeHtml(entry.transportMethod || '')}</td><td>${escapeHtml(entry.note || '')}</td><td class="no-print"><div class="actions"><button class="mini-btn" onclick="editEntry('${entry.id}')">編集</button><button class="mini-btn" onclick="openLuggage('${entry.id}')">荷物</button><button class="mini-btn gray" onclick="openSlip('${entry.id}')">利用票</button><button class="mini-btn delete" onclick="deleteEntry('${entry.id}')">削除</button></div></td></tr>`; }).join(''); }
     function formatStayPeriod(entry){ return `${fmtDateTime(combineDateTime(entry.startDate, entry.startHour))} 〜 ${fmtDateTime(combineDateTime(entry.endDate, entry.endHour))}`; }
     function calcUsageDays(entry){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour); return Math.floor((new Date(e.getFullYear(),e.getMonth(),e.getDate()) - new Date(s.getFullYear(),s.getMonth(),s.getDate())) / 86400000) + 1; }
@@ -685,7 +751,7 @@
     function addCustomLuggageItem(){ const value=(el.newLuggageItem.value||'').trim(); if (!value) { alert('追加したい荷物項目を入力してください'); return; } if (getAllCheckItems().includes(value)) { flash('同じ項目があるため追加しませんでした'); el.newLuggageItem.value=''; return; } state.checkItems=[...new Set([...state.checkItems, value])]; saveCheckItems(); renderLuggageTab(); el.newLuggageItem.value=''; flash('荷物項目を追加しました'); }
     function renderReturnSummary(entry){ const missing=getUnreturnedItems(entry); if (!missing.length) { el.returnSummary.innerHTML=`<div class="return-summary-title" style="color:#166534">未返却なし</div><div class="return-empty">現在、未返却の荷物はありません。</div>`; el.returnSummary.style.borderColor='#bbf7d0'; el.returnSummary.style.background='#f0fdf4'; return; } el.returnSummary.innerHTML=`<div class="return-summary-title">未返却のもの</div><div class="return-pill-wrap">${missing.map(item => `<span class="return-pill">${escapeHtml(item)}</span>`).join('')}</div>`; el.returnSummary.style.borderColor='#fecaca'; el.returnSummary.style.background='#fff1f2'; }
     function renderLuggageTab(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.luggageSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.luggageMeta.textContent='荷物チェックを使うには、先に利用者登録をしてください。'; el.luggageCheckinGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.luggageCheckoutGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.returnSummary.innerHTML=''; return; } const currentId=el.luggageSelect.value || sorted[0].id; el.luggageSelect.innerHTML=sorted.map(entry => { const s=combineDateTime(entry.startDate, entry.startHour), missing=getUnreturnedItems(entry); return `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(s)} 入所${missing.length ? ` / 未返却${missing.length}` : ''}</option>`; }).join(''); const entry=sorted.find(x => x.id === (el.luggageSelect.value || currentId)) || sorted[0]; el.luggageSelect.value=entry.id; const checkinList=Array.isArray(entry.checklistCheckin)?entry.checklistCheckin:(Array.isArray(entry.checklist)?entry.checklist:[]), checkoutList=Array.isArray(entry.checklistCheckout)?entry.checklistCheckout:[]; el.luggageMeta.textContent=`対象: ${entry.name}さん / 居室: ${entry.room || '未設定'} / 利用期間: ${formatStayPeriod(entry)}`; renderReturnSummary(entry); renderChecklistInto(el.luggageCheckinGrid, checkinList); renderChecklistInto(el.luggageCheckoutGrid, checkoutList, checkinList); }
-    function renderSlip(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.slipSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.slipContainer.innerHTML='<div class="empty">利用票を作るには、まず利用者を登録してください。</div>'; return; } const currentId=el.slipSelect.value || sorted[0].id; el.slipSelect.innerHTML=sorted.map(entry => `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 入所</option>`).join(''); const entry=sorted.find(x => x.id === (el.slipSelect.value || currentId)) || sorted[0]; el.slipSelect.value=entry.id; const transport=entry.transportMethod || '未設定'; el.slipContainer.innerHTML=`<div class="slip-sheet"><div class="slip-head"><h2 class="slip-title">ショートステイ利用票</h2><div class="slip-sub">ご家族お渡し用</div></div><div class="slip-grid"><div class="slip-row"><div class="slip-label">利用者名</div><div class="slip-value">${escapeHtml(entry.name)}</div></div><div class="slip-row"><div class="slip-label">居室</div><div class="slip-value">${escapeHtml(entry.room || '')}</div></div><div class="slip-row"><div class="slip-label">利用期間</div><div class="slip-value">${formatStayPeriod(entry)}</div></div><div class="slip-row"><div class="slip-label">利用日数</div><div class="slip-value">${calcUsageDays(entry)}日</div></div><div class="slip-row"><div class="slip-label">送迎</div><div class="slip-value">${transport}</div></div><div class="slip-row"><div class="slip-label">作成日</div><div class="slip-value">${fmtDate(new Date())}</div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">お食事について</div><div style="min-height:64px; white-space:pre-wrap;">${escapeHtml(entry.mealInfo || ' ')}</div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">排泄について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終排便日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBowelDate) || '')}</div></div><div class="slip-row"><div class="slip-label">排便量</div><div class="slip-value">${escapeHtml(entry.bowelAmount || '')}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">入浴について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終入浴日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBathDate) || '')}</div></div><div class="slip-row"><div class="slip-label">利用中の回数</div><div class="slip-value">${escapeHtml(entry.bathCount || '')}${entry.bathCount ? '回' : ''}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">利用中の様子</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.stayNote || ' ')}</div></div><div class="slip-box"><div class="section-title" style="font-size:15px; margin-bottom:8px;">備考・申し送り</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.note || ' ')}</div></div><div class="slip-footer"><div><div class="muted">ご家族確認欄</div><div class="sign-line"></div></div><div><div class="muted">施設確認欄</div><div class="sign-line"></div></div></div></div>`; }
+    function renderSlip(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.slipSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.slipContainer.innerHTML='<div class="empty">利用票を作るには、まず利用者を登録してください。</div>'; return; } const currentId=el.slipSelect.value || sorted[0].id; el.slipSelect.innerHTML=sorted.map(entry => `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 入所</option>`).join(''); const entry=sorted.find(x => x.id === (el.slipSelect.value || currentId)) || sorted[0]; el.slipSelect.value=entry.id; const transport=entry.transportMethod || '未設定'; el.slipContainer.innerHTML=`<div class="slip-sheet"><div class="slip-head"><h2 class="slip-title">ショートステイ利用票</h2><div class="slip-sub">ご家族お渡し用</div></div><div class="slip-grid"><div class="slip-row"><div class="slip-label">利用者名</div><div class="slip-value">${escapeHtml(entry.name)}</div></div><div class="slip-row"><div class="slip-label">居室</div><div class="slip-value">${escapeHtml(entry.room || '')}</div></div><div class="slip-row"><div class="slip-label">利用期間</div><div class="slip-value">${formatStayPeriod(entry)}</div></div><div class="slip-row"><div class="slip-label">利用日数</div><div class="slip-value">${calcUsageDays(entry)}日</div></div><div class="slip-row"><div class="slip-label">送迎</div><div class="slip-value">${transport}</div></div><div class="slip-row"><div class="slip-label">作成日</div><div class="slip-value">${fmtDate(new Date())}</div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">お食事について</div><div style="min-height:64px; white-space:pre-wrap;">${escapeHtml(entry.mealInfo || ' ')}</div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">排泄について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終排便日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBowelDate) || '')}</div></div><div class="slip-row"><div class="slip-label">排便量</div><div class="slip-value">${escapeHtml(entry.bowelAmount || '')}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">入浴について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終入浴日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBathDate) || '')}</div></div><div class="slip-row"><div class="slip-label">利用中の回数</div><div class="slip-value">${escapeHtml(entry.bathCount || '')}${entry.bathCount ? '回' : ''}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">利用中の様子</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.stayNote || ' ')}</div></div><div class="slip-box"><div class="section-title" style="font-size:15px; margin-bottom:8px;">備考・申し送り</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.note || ' ')}</div></div><div class="slip-footer"><div><div class="muted">ご家族確認欄</div><div class="sign-line"></div></div><div><div class="muted">施設確認欄</div><div class="sign-line"></div></div>${isCheckoutDay ? `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span></div>` : ''}</div></div>`; }
     function renderAll(){ renderCalendar(); renderList(); renderLuggageTab(); renderSlip(); }
     function saveSilent(){ syncEntriesToDB(); }
     function escapeHtml(str){ return String(str ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
@@ -711,7 +777,7 @@
 
     function openLuggage(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="luggageTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('luggageTab').classList.remove('hidden'); el.luggageSelect.value=id; renderLuggageTab(); window.scrollTo({top:0, behavior:'smooth'}); }
     function openSlip(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="slipTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('slipTab').classList.remove('hidden'); el.slipSelect.value=id; renderSlip(); window.scrollTo({top:0, behavior:'smooth'}); }
-    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.transportMethod.value=entry.transportMethod||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; el.submitBtn.textContent='更新する'; openEntryDrawer(); }
+    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.transportMethod.value=entry.transportMethod||''; el.startPreset.value=entry.transportMethod||''; el.endPreset.value=entry.transportMethod||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; setUndecided('start', !!entry.startUndecided); setUndecided('end', !!entry.endUndecided); el.submitBtn.textContent='更新する'; openEntryDrawer(); }
     function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; state.entries=state.entries.filter(x => x.id!==id); deleteEntryFromDB(id); renderAll(); flash('削除しました'); }
 
     function openDayModal(dateStr){
@@ -737,7 +803,7 @@
               </div>
             </div>
             <div style="font-size:13px;color:#475569;margin-top:4px;">${fmtDate(s)} 〜 ${fmtDate(e)}</div>
-            <div style="font-size:12px;color:#64748b;">${entry.room ? escapeHtml(entry.room)+' / ' : ''}${fmtTime(s)} 〜 ${fmtTime(e)}</div>
+            <div style="font-size:12px;color:#64748b;">${entry.room ? escapeHtml(entry.room)+' / ' : ''}${fmtTimeEntry(entry,'start')} 〜 ${fmtTimeEntry(entry,'end')}</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
               <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">入 ${fmtDate(s).slice(5)}</span>
               <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">退 ${fmtDate(e).slice(5)}</span>
@@ -767,12 +833,14 @@
     el.nextMonthBtn.addEventListener('click', () => { state.current=new Date(state.current.getFullYear(), state.current.getMonth()+1, 1); renderAll(); });
     el.todayBtn.addEventListener('click', () => { state.current=new Date(new Date().getFullYear(), new Date().getMonth(), 1); renderAll(); });
     el.monthPicker.addEventListener('change', () => { if (!el.monthPicker.value) return; const [y,m]=el.monthPicker.value.split('-').map(Number); state.current=new Date(y, m-1, 1); renderAll(); });
-    el.slipSelect.addEventListener('change', renderSlip); el.slipPrintBtn.addEventListener('click', () => window.print()); el.luggageSelect.addEventListener('change', renderLuggageTab);
+    el.slipSelect.addEventListener('change', renderSlip); el.slipPrintBtn.addEventListener('click', () => window.print()); document.getElementById('calPrintBtn').addEventListener('click', () => { document.body.classList.add('print-calendar'); window.print(); setTimeout(() => document.body.classList.remove('print-calendar'), 1000); }); el.luggageSelect.addEventListener('change', renderLuggageTab);
     el.luggageSaveBtn.addEventListener('click', () => { const index=state.entries.findIndex(x => x.id===el.luggageSelect.value); if (index < 0) return; state.entries[index].checklistCheckin=getChecklistValuesFrom(el.luggageCheckinGrid); state.entries[index].checklistCheckout=getChecklistValuesFrom(el.luggageCheckoutGrid); state.entries[index].updatedAt=new Date().toISOString(); saveSilent(); renderAll(); flash('入所時・退苑時の荷物チェックを保存しました'); });
     el.addLuggageItemBtn.addEventListener('click', addCustomLuggageItem); el.newLuggageItem.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); addCustomLuggageItem(); } });
     el.resetLuggageItemsBtn.addEventListener('click', () => { if (!confirm('追加した荷物項目を初期状態に戻しますか？\n利用者に保存済みのチェック内容は消えません。')) return; state.checkItems=[...DEFAULT_CHECK_ITEMS]; saveCheckItems(); saveSilent(); renderAll(); flash('荷物項目を初期状態に戻しました'); });
-    el.startPreset.addEventListener('change', () => { if (el.startPreset.value) el.startHour.value=el.startPreset.value; });
-    el.endPreset.addEventListener('change', () => { if (el.endPreset.value) el.endHour.value=el.endPreset.value; });
+    el.startUndecidedBtn.addEventListener('click', () => setUndecided('start', !state.startUndecided));
+    el.endUndecidedBtn.addEventListener('click', () => setUndecided('end', !state.endUndecided));
+    el.startPreset.addEventListener('change', () => { if (el.startPreset.value) { el.transportMethod.value=el.startPreset.value; el.endPreset.value=el.startPreset.value; } });
+    el.endPreset.addEventListener('change', () => { if (el.endPreset.value) { el.transportMethod.value=el.endPreset.value; el.startPreset.value=el.endPreset.value; } });
     el.openEntryBtn.addEventListener('click', () => { resetForm(); openEntryDrawer(); });
     document.getElementById('dayModalClose').addEventListener('click', closeDayModal);
     document.getElementById('dayModalBackdrop').addEventListener('click', closeDayModal);
