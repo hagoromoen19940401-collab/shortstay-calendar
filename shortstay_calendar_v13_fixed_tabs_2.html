@@ -314,7 +314,7 @@
                       <button type="button" class="btn-undecided" id="startUndecidedBtn">未定</button>
                       <select id="startPreset">
                         <option value="">送迎選択</option>
-                        <option value="施設迎え">施設迎え</option>
+                        <option value="施設送迎">施設送迎</option>
                         <option value="家族送迎">家族送迎</option>
                         <option value="その他">その他</option>
                       </select>
@@ -329,7 +329,7 @@
                       <button type="button" class="btn-undecided" id="endUndecidedBtn">未定</button>
                       <select id="endPreset">
                         <option value="">送迎選択</option>
-                        <option value="施設迎え">施設迎え</option>
+                        <option value="施設送迎">施設送迎</option>
                         <option value="家族送迎">家族送迎</option>
                         <option value="その他">その他</option>
                       </select>
@@ -341,15 +341,7 @@
                     <input id="room" type="text" placeholder="例）20号室" />
                   </div>
 
-                  <div class="field">
-                    <label for="transportMethod">送迎方法</label>
-                    <select id="transportMethod">
-                      <option value="">未設定</option>
-                      <option value="施設迎え">施設迎え</option>
-                      <option value="家族送迎">家族送迎</option>
-                      <option value="その他">その他</option>
-                    </select>
-                  </div>
+
 
 
                   <div class="field full">
@@ -394,7 +386,7 @@
                 </div>
 
                 <div class="form-actions">
-                  <button class="btn primary" type="submit" id="submitBtn">登録する</button>
+                  <button class="btn primary" type="submit" id="submitBtn" onclick="setTimeout(()=>{ document.getElementById('entryDrawer').classList.remove('show'); document.body.style.overflow=''; },50)">登録する</button>
                   <button class="btn" type="button" id="cancelEditBtn">入力リセット</button>
                 </div>
               </form>
@@ -491,28 +483,38 @@
 
         <div class="card hidden" id="listTab">
           <div class="card-body">
-            <div class="list-tools">
-              <div>
-                <h3 class="section-title">登録一覧</h3>
-                <div class="muted">編集・削除・確認用。ブラウザ保存にも対応しています。</div>
+            <h3 class="section-title" style="margin-bottom:16px;">利用者一覧</h3>
+
+            <!-- 現在利用中 -->
+            <div style="margin-bottom:24px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;"></span>
+                <span style="font-weight:900;font-size:15px;color:#16a34a;">現在利用中</span>
+                <span id="activeCount" style="background:#dcfce7;color:#166534;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;"></span>
               </div>
+              <div id="activeList"></div>
             </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>利用者名</th>
-                    <th>開始</th>
-                    <th>終了</th>
-                    <th>居室</th>
-                    <th>送迎</th>
-                    <th>備考</th>
-                    <th class="no-print">操作</th>
-                  </tr>
-                </thead>
-                <tbody id="listBody"></tbody>
-              </table>
+
+            <!-- 今後の予定 -->
+            <div style="margin-bottom:24px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2563eb;"></span>
+                <span style="font-weight:900;font-size:15px;color:#2563eb;">今後の予定</span>
+                <span id="upcomingCount" style="background:#dbeafe;color:#1e40af;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;"></span>
+              </div>
+              <div id="upcomingList"></div>
             </div>
+
+            <!-- 過去の利用 -->
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#94a3b8;"></span>
+                <span style="font-weight:900;font-size:15px;color:#94a3b8;">過去の利用</span>
+                <span id="pastCount" style="background:#f1f5f9;color:#64748b;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;"></span>
+              </div>
+              <div id="pastList"></div>
+            </div>
+
           </div>
         </div>
 
@@ -565,7 +567,8 @@
       startUndecidedBtn: document.getElementById('startUndecidedBtn'),
       endUndecidedBtn: document.getElementById('endUndecidedBtn'),
       room: document.getElementById('room'),
-      transportMethod: document.getElementById('transportMethod'),
+      transportCheckin: document.getElementById('transportCheckin'),
+      transportCheckout: document.getElementById('transportCheckout'),
 
       mealInfo: document.getElementById('mealInfo'),
       lastBowelDate: document.getElementById('lastBowelDate'),
@@ -624,7 +627,7 @@
           id: e.id, name: e.name,
           start_date: e.startDate, start_hour: e.startHour,
           end_date: e.endDate, end_hour: e.endHour,
-          room: e.room||'', transport_method: e.transportMethod||'',
+          room: e.room||'', transport_method: e.transportMethod||'', transport_checkin: e.transportCheckin||e.transportMethod||'', transport_checkout: e.transportCheckout||'',
           meal_info: e.mealInfo||'', last_bowel_date: e.lastBowelDate||'',
           bowel_amount: e.bowelAmount||'', last_bath_date: e.lastBathDate||'',
           bath_count: e.bathCount||'', stay_note: e.stayNote||'', note: e.note||'',
@@ -651,7 +654,7 @@
             id: r.id, name: r.name,
             startDate: r.start_date, startHour: r.start_hour,
             endDate: r.end_date, endHour: r.end_hour,
-            room: r.room||'', transportMethod: r.transport_method||'',
+            room: r.room||'', transportMethod: r.transport_checkin||r.transport_method||'', transportCheckin: r.transport_checkin||r.transport_method||'', transportCheckout: r.transport_checkout||'',
             mealInfo: r.meal_info||'', lastBowelDate: r.last_bowel_date||'',
             bowelAmount: r.bowel_amount||'', lastBathDate: r.last_bath_date||'',
             bathCount: r.bath_count||'', stayNote: r.stay_note||'', note: r.note||'',
@@ -697,13 +700,12 @@
       const start = combineDateTime(el.startDate.value, el.startHour.value);
       const end = combineDateTime(el.endDate.value, el.endHour.value);
       if (!el.name.value.trim()) { alert('利用者名を入力してください'); return null; }
-      if (!start || !end) { alert('開始日時・終了日時を入力してください'); return null; }
-      if (start > end) { alert('終了日時は開始日時より後にしてください'); return null; }
+      if (!el.startDate.value || !el.endDate.value) { alert('入苑日・退苑日を入力してください'); return null; }
       const old = getEntryById(el.editId.value || '') || {};
       return {
         id: el.editId.value || crypto.randomUUID(),
         name: el.name.value.trim(), startDate: el.startDate.value, startHour: el.startHour.value, endDate: el.endDate.value, endHour: el.endHour.value,
-        room: el.room.value.trim(), transportMethod: el.transportMethod.value,
+        room: el.room.value.trim(), transportCheckin: el.transportCheckin.value, transportCheckout: el.transportCheckout.value, transportMethod: el.transportCheckin.value,
         mealInfo: el.mealInfo.value.trim(), lastBowelDate: el.lastBowelDate.value, bowelAmount: el.bowelAmount.value, lastBathDate: el.lastBathDate.value,
         bathCount: el.bathCount.value ? String(el.bathCount.value) : '', stayNote: el.stayNote.value.trim(), note: el.note.value.trim(),
         checklistCheckin: Array.isArray(old.checklistCheckin) ? old.checklistCheckin : (Array.isArray(old.checklist) ? old.checklist : []),
@@ -742,8 +744,53 @@
       }
       el.calendar.innerHTML=html; renderTopSummaries();
     }
-    function renderDayEntry(entry, day){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour), currentMonthYear=`${state.current.getFullYear()}/${String(state.current.getMonth()+1).padStart(2,'0')}`, color=getNameColor(entry.name), missing=getUnreturnedItems(entry), isCheckoutDay=fmtDate(e)===fmtDate(day), isCheckinDay=fmtDate(s)===fmtDate(day); return `<div class="entry ${missing.length && isCheckoutDay ? 'return-warning' : ''}" style="background:${color.bg};border-left-color:${color.border};position:relative;${(isCheckoutDay||isCheckinDay)?'padding-bottom:28px;':''}"><div class="entry-head"><div class="name">${escapeHtml(entry.name)}</div>${missing.length && isCheckoutDay ? `<span class="entry-alert">⚠</span>` : ''}</div><div class="meta">${entry.room ? escapeHtml(entry.room)+' / ' : ''}${fmtTimeEntry(entry,'start')}-${fmtTimeEntry(entry,'end')}</div><div class="tag-row"><span class="tag in">入 ${fmtDate(s).startsWith(currentMonthYear) ? fmtDate(s).slice(5) : fmtDate(s)}</span><span class="tag out">退 ${fmtDate(e).startsWith(currentMonthYear) ? fmtDate(e).slice(5) : fmtDate(e)}</span>${entry.transportMethod ? `<span class="tag transport">${escapeHtml(entry.transportMethod)}</span>` : ''}${missing.length && isCheckoutDay ? `<span class="tag return">未返却 ${missing.length}</span>` : ''}</div>${isCheckinDay ? `<span style="position:absolute;bottom:5px;left:6px;display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#16a34a;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🌿 入苑</span>` : ''}${isCheckoutDay ? `<span style="position:absolute;bottom:5px;right:6px;display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span>` : ''}</div>`; }
-    function renderList(){ if (!state.entries.length) { el.listBody.innerHTML=`<tr><td colspan="7" class="empty">まだ登録はありません</td></tr>`; return; } el.listBody.innerHTML=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)).map(entry => { const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour), missing=getUnreturnedItems(entry); return `<tr><td>${escapeHtml(entry.name)}${missing.length ? `<div class="muted" style="color:#b91c1c;font-weight:800;margin-top:4px;">未返却 ${missing.length}件</div>` : ''}</td><td>${fmtDateTime(s)}</td><td>${fmtDateTime(e)}</td><td>${escapeHtml(entry.room || '')}</td><td>${escapeHtml(entry.transportMethod || '')}</td><td>${escapeHtml(entry.note || '')}</td><td class="no-print"><div class="actions"><button class="mini-btn" onclick="editEntry('${entry.id}')">編集</button><button class="mini-btn" onclick="openLuggage('${entry.id}')">荷物</button><button class="mini-btn gray" onclick="openSlip('${entry.id}')">利用票</button><button class="mini-btn delete" onclick="deleteEntry('${entry.id}')">削除</button></div></td></tr>`; }).join(''); }
+    function renderDayEntry(entry, day){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour), currentMonthYear=`${state.current.getFullYear()}/${String(state.current.getMonth()+1).padStart(2,'0')}`, color=getNameColor(entry.name), missing=getUnreturnedItems(entry), isCheckoutDay=fmtDate(e)===fmtDate(day), isCheckinDay=fmtDate(s)===fmtDate(day); return `<div class="entry ${missing.length && isCheckoutDay ? 'return-warning' : ''}" style="background:${color.bg};border-left-color:${color.border};position:relative;${(isCheckoutDay||isCheckinDay)?'padding-bottom:28px;':''}"><div class="entry-head"><div class="name">${escapeHtml(entry.name)}</div>${missing.length && isCheckoutDay ? `<span class="entry-alert">⚠</span>` : ''}</div><div class="meta">${entry.room ? escapeHtml(entry.room)+' / ' : ''}${fmtTimeEntry(entry,'start')}-${fmtTimeEntry(entry,'end')}</div><div class="tag-row"><span class="tag in">入 ${fmtDate(s).startsWith(currentMonthYear) ? fmtDate(s).slice(5) : fmtDate(s)}</span><span class="tag out">退 ${fmtDate(e).startsWith(currentMonthYear) ? fmtDate(e).slice(5) : fmtDate(e)}</span>${entry.transportCheckin ? `<span class="tag transport">迎:${escapeHtml(entry.transportCheckin)}</span>` : ''}${entry.transportCheckout ? `<span class="tag transport">送:${escapeHtml(entry.transportCheckout)}</span>` : ''}${missing.length && isCheckoutDay ? `<span class="tag return">未返却 ${missing.length}</span>` : ''}</div>${isCheckinDay ? `<span style="position:absolute;bottom:5px;left:6px;display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#16a34a;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🌿 入苑</span>` : ''}${isCheckoutDay ? `<span style="position:absolute;bottom:5px;right:6px;display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span>` : ''}</div>`; }
+    function renderList(){
+      const now = new Date();
+      const sorted = [...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour));
+      const active   = sorted.filter(e => combineDateTime(e.startDate,e.startHour)<=now && combineDateTime(e.endDate,e.endHour)>=now);
+      const upcoming = sorted.filter(e => combineDateTime(e.startDate,e.startHour)>now);
+      const past     = sorted.filter(e => combineDateTime(e.endDate,e.endHour)<now).reverse();
+
+      function entryCard(entry, accent){
+        const s=combineDateTime(entry.startDate,entry.startHour), e=combineDateTime(entry.endDate,entry.endHour);
+        const missing=getUnreturnedItems(entry), color=getNameColor(entry.name);
+        const days = Math.ceil((combineDateTime(entry.endDate,entry.endHour)-combineDateTime(entry.startDate,entry.startHour))/(1000*60*60*24));
+        return `<div style="border:1px solid ${color.border};border-left:5px solid ${color.border};background:${color.bg};border-radius:14px;padding:12px 14px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div>
+              <div style="font-weight:900;font-size:16px;">${escapeHtml(entry.name)}</div>
+              ${entry.room ? `<div style="font-size:12px;color:#64748b;margin-top:1px;">居室: ${escapeHtml(entry.room)}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:5px;flex-shrink:0;">
+              <button onclick="editEntry('${entry.id}')" style="border:none;background:#eef2ff;color:#3730a3;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">編集</button>
+              <button onclick="openLuggage('${entry.id}')" style="border:none;background:#f0fdf4;color:#166534;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">荷物</button>
+              <button onclick="openSlip('${entry.id}')" style="border:none;background:#fefce8;color:#854d0e;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">利用票</button>
+              <button onclick="if(confirm('${escapeHtml(entry.name)}さんを削除しますか？')){window.deleteEntry('${entry.id}')}" style="border:none;background:#fee2e2;color:#991b1b;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">削除</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+            <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">🌿 入 ${entry.startUndecided ? fmtDate(s) : fmtDateTime(s)}</span>
+            <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">🏠 退 ${entry.endUndecided ? fmtDate(e) : fmtDateTime(e)}</span>
+            ${days ? `<span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">${days}泊</span>` : ''}
+            ${entry.transportCheckin ? `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">迎:${escapeHtml(entry.transportCheckin)}</span>` : ''}
+            ${entry.transportCheckout ? `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">送:${escapeHtml(entry.transportCheckout)}</span>` : ''}
+            ${missing.length ? `<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;">⚠ 未返却 ${missing.length}件</span>` : ''}
+          </div>
+          ${entry.note ? `<div style="font-size:12px;color:#475569;margin-top:6px;background:#fff;border-radius:8px;padding:5px 8px;">${escapeHtml(entry.note)}</div>` : ''}
+        </div>`;
+      }
+
+      const emptyMsg = (msg) => `<div style="color:#94a3b8;font-size:13px;padding:10px 0;">${msg}</div>`;
+
+      document.getElementById('activeCount').textContent   = active.length   ? `${active.length}名` : '';
+      document.getElementById('upcomingCount').textContent = upcoming.length ? `${upcoming.length}名` : '';
+      document.getElementById('pastCount').textContent     = past.length     ? `${past.length}名` : '';
+
+      document.getElementById('activeList').innerHTML   = active.length   ? active.map(e=>entryCard(e,'#16a34a')).join('')   : emptyMsg('現在利用中の方はいません');
+      document.getElementById('upcomingList').innerHTML = upcoming.length ? upcoming.map(e=>entryCard(e,'#2563eb')).join('') : emptyMsg('予定はありません');
+      document.getElementById('pastList').innerHTML     = past.length     ? past.map(e=>entryCard(e,'#94a3b8')).join('')     : emptyMsg('過去の記録はありません');
+    }
     function formatStayPeriod(entry){ return `${fmtDateTime(combineDateTime(entry.startDate, entry.startHour))} 〜 ${fmtDateTime(combineDateTime(entry.endDate, entry.endHour))}`; }
     function calcUsageDays(entry){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour); return Math.floor((new Date(e.getFullYear(),e.getMonth(),e.getDate()) - new Date(s.getFullYear(),s.getMonth(),s.getDate())) / 86400000) + 1; }
     function renderChecklistInto(container, items=[], compareItems=null){ const list=getAllCheckItems(); container.innerHTML=list.map(item => { const checked=items.includes(item), disabled=Array.isArray(compareItems) && !compareItems.includes(item); return `<label class="check-item ${checked?'done':''}" ${disabled?'style="opacity:.45"':''}><input type="checkbox" value="${escapeHtmlAttr(item)}" ${checked?'checked':''} ${disabled?'disabled':''}><span>${escapeHtml(item)}</span></label>`; }).join(''); }
@@ -777,7 +824,7 @@
 
     function openLuggage(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="luggageTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('luggageTab').classList.remove('hidden'); el.luggageSelect.value=id; renderLuggageTab(); window.scrollTo({top:0, behavior:'smooth'}); }
     function openSlip(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="slipTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('slipTab').classList.remove('hidden'); el.slipSelect.value=id; renderSlip(); window.scrollTo({top:0, behavior:'smooth'}); }
-    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.transportMethod.value=entry.transportMethod||''; el.startPreset.value=entry.transportMethod||''; el.endPreset.value=entry.transportMethod||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; setUndecided('start', !!entry.startUndecided); setUndecided('end', !!entry.endUndecided); el.submitBtn.textContent='更新する'; openEntryDrawer(); }
+    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.transportCheckin.value=entry.transportCheckin||entry.transportMethod||''; el.transportCheckout.value=entry.transportCheckout||''; el.startPreset.value=entry.transportCheckin||entry.transportMethod||''; el.endPreset.value=entry.transportCheckout||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; setUndecided('start', !!entry.startUndecided); setUndecided('end', !!entry.endUndecided); el.submitBtn.textContent='更新する'; openEntryDrawer(); }
     function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; state.entries=state.entries.filter(x => x.id!==id); deleteEntryFromDB(id); renderAll(); flash('削除しました'); }
 
     function openDayModal(dateStr){
@@ -800,6 +847,7 @@
               <div style="display:flex;gap:6px;">
                 <button onclick="editEntry('${entry.id}');closeDayModal();" style="border:none;background:#eef2ff;color:#3730a3;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">編集</button>
                 <button onclick="openLuggage('${entry.id}');closeDayModal();" style="border:none;background:#f0fdf4;color:#166534;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">荷物</button>
+                <button onclick="deleteEntry('${entry.id}');closeDayModal();" style="border:none;background:#fee2e2;color:#991b1b;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">削除</button>
               </div>
             </div>
             <div style="font-size:13px;color:#475569;margin-top:4px;">${fmtDate(s)} 〜 ${fmtDate(e)}</div>
@@ -819,11 +867,11 @@
     function closeDayModal(){
       document.getElementById('dayModal').style.display='none';
     }
-    window.openDayModal=openDayModal; window.closeDayModal=closeDayModal;
+    window.openDayModal=openDayModal; window.closeDayModal=closeDayModal; window.deleteEntry=deleteEntry; window.editEntry=editEntry; window.openLuggage=openLuggage; window.openSlip=openSlip;
 
     window.openLuggage=openLuggage; window.openSlip=openSlip; window.editEntry=editEntry; window.deleteEntry=deleteEntry;
 
-    el.entryForm.addEventListener('submit', e => { e.preventDefault(); const data=getFormData(); if (!data) return; const index=state.entries.findIndex(x => x.id===data.id); if (index >= 0) state.entries[index]=data; else state.entries.push(data); saveSilent(); renderAll(); resetForm(); closeEntryDrawer(); flash(index >= 0 ? '更新しました' : '登録しました'); });
+    el.entryForm.addEventListener('submit', e => { e.preventDefault(); const data=getFormData(); if (!data) return; const index=state.entries.findIndex(x => x.id===data.id); if (index >= 0) state.entries[index]=data; else state.entries.push(data); saveSilent(); renderAll(); closeEntryDrawer(); resetForm(); flash(index >= 0 ? '更新しました' : '登録しました'); });
     el.cancelEditBtn.addEventListener('click', () => { resetForm(); closeEntryDrawer(); });
     el.saveBtn.addEventListener('click', saveToStorage);
     el.resetBtn.addEventListener('click', async () => { if (!confirm('全データを削除しますか？')) return; await sb.from('shortstay_entries').delete().neq('id',''); state.entries=[]; renderAll(); resetForm(); flash('全データを削除しました'); });
@@ -839,8 +887,8 @@
     el.resetLuggageItemsBtn.addEventListener('click', () => { if (!confirm('追加した荷物項目を初期状態に戻しますか？\n利用者に保存済みのチェック内容は消えません。')) return; state.checkItems=[...DEFAULT_CHECK_ITEMS]; saveCheckItems(); saveSilent(); renderAll(); flash('荷物項目を初期状態に戻しました'); });
     el.startUndecidedBtn.addEventListener('click', () => setUndecided('start', !state.startUndecided));
     el.endUndecidedBtn.addEventListener('click', () => setUndecided('end', !state.endUndecided));
-    el.startPreset.addEventListener('change', () => { if (el.startPreset.value) { el.transportMethod.value=el.startPreset.value; el.endPreset.value=el.startPreset.value; } });
-    el.endPreset.addEventListener('change', () => { if (el.endPreset.value) { el.transportMethod.value=el.endPreset.value; el.startPreset.value=el.endPreset.value; } });
+    el.startPreset.addEventListener('change', () => { if (el.startPreset.value) el.transportCheckin.value=el.startPreset.value; });
+    el.endPreset.addEventListener('change', () => { if (el.endPreset.value) el.transportCheckout.value=el.endPreset.value; });
     el.openEntryBtn.addEventListener('click', () => { resetForm(); openEntryDrawer(); });
     document.getElementById('dayModalClose').addEventListener('click', closeDayModal);
     document.getElementById('dayModalBackdrop').addEventListener('click', closeDayModal);
