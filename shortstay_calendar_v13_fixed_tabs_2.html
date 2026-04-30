@@ -78,10 +78,6 @@
     }
     textarea{min-height:96px;resize:vertical;}
     .inline{display:grid;grid-template-columns:1fr 120px;gap:8px;}
-    .inline-4{display:grid;grid-template-columns:1fr 90px auto 110px;gap:8px;}
-    .time-undecided input[type="time"]{opacity:.35;pointer-events:none;}
-    .btn-undecided{border:none;border-radius:12px;padding:0 10px;font-weight:700;cursor:pointer;min-height:48px;font-size:12px;white-space:nowrap;background:#f1f5f9;color:#334155;}
-    .btn-undecided.active{background:#fef3c7;color:#92400e;}
     .form-actions{display:flex;gap:8px;flex-wrap:wrap;padding-top:4px;}
     .calendar-shell{padding:12px;}
     .calendar-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
@@ -308,10 +304,71 @@
 
                   <div class="field full">
                     <label>入苑日時</label>
-                    <div class="inline-4" id="startRow">
+                    <div class="inline-3">
                       <input id="startDate" type="date" required />
-                      <input id="startHour" type="time" step="900" value="10:00" required />
-                      <button type="button" class="btn-undecided" id="startUndecidedBtn">未定</button>
+                      <select id="startHour">
+                        <option value="未定">時間未定</option>
+                        <option value="08:00">08:00</option>
+                        <option value="08:10">08:10</option>
+                        <option value="08:20">08:20</option>
+                        <option value="08:30">08:30</option>
+                        <option value="08:40">08:40</option>
+                        <option value="08:50">08:50</option>
+                        <option value="09:00">09:00</option>
+                        <option value="09:10">09:10</option>
+                        <option value="09:20">09:20</option>
+                        <option value="09:30">09:30</option>
+                        <option value="09:40">09:40</option>
+                        <option value="09:50">09:50</option>
+                        <option value="10:00" selected>10:00</option>
+                        <option value="10:10">10:10</option>
+                        <option value="10:20">10:20</option>
+                        <option value="10:30">10:30</option>
+                        <option value="10:40">10:40</option>
+                        <option value="10:50">10:50</option>
+                        <option value="11:00">11:00</option>
+                        <option value="11:10">11:10</option>
+                        <option value="11:20">11:20</option>
+                        <option value="11:30">11:30</option>
+                        <option value="11:40">11:40</option>
+                        <option value="11:50">11:50</option>
+                        <option value="12:00">12:00</option>
+                        <option value="12:10">12:10</option>
+                        <option value="12:20">12:20</option>
+                        <option value="12:30">12:30</option>
+                        <option value="12:40">12:40</option>
+                        <option value="12:50">12:50</option>
+                        <option value="13:00">13:00</option>
+                        <option value="13:10">13:10</option>
+                        <option value="13:20">13:20</option>
+                        <option value="13:30">13:30</option>
+                        <option value="13:40">13:40</option>
+                        <option value="13:50">13:50</option>
+                        <option value="14:00">14:00</option>
+                        <option value="14:10">14:10</option>
+                        <option value="14:20">14:20</option>
+                        <option value="14:30">14:30</option>
+                        <option value="14:40">14:40</option>
+                        <option value="14:50">14:50</option>
+                        <option value="15:00">15:00</option>
+                        <option value="15:10">15:10</option>
+                        <option value="15:20">15:20</option>
+                        <option value="15:30">15:30</option>
+                        <option value="15:40">15:40</option>
+                        <option value="15:50">15:50</option>
+                        <option value="16:00">16:00</option>
+                        <option value="16:10">16:10</option>
+                        <option value="16:20">16:20</option>
+                        <option value="16:30">16:30</option>
+                        <option value="16:40">16:40</option>
+                        <option value="16:50">16:50</option>
+                        <option value="17:00">17:00</option>
+                        <option value="17:10">17:10</option>
+                        <option value="17:20">17:20</option>
+                        <option value="17:30">17:30</option>
+                        <option value="17:40">17:40</option>
+                        <option value="17:50">17:50</option>
+                      </select>
                       <select id="startPreset">
                         <option value="">送迎選択</option>
                         <option value="施設送迎">施設送迎</option>
@@ -323,10 +380,71 @@
 
                   <div class="field full">
                     <label>退苑日時</label>
-                    <div class="inline-4" id="endRow">
+                    <div class="inline-3">
                       <input id="endDate" type="date" required />
-                      <input id="endHour" type="time" step="900" value="10:00" required />
-                      <button type="button" class="btn-undecided" id="endUndecidedBtn">未定</button>
+                      <select id="endHour">
+                        <option value="未定">時間未定</option>
+                        <option value="08:00">08:00</option>
+                        <option value="08:10">08:10</option>
+                        <option value="08:20">08:20</option>
+                        <option value="08:30">08:30</option>
+                        <option value="08:40">08:40</option>
+                        <option value="08:50">08:50</option>
+                        <option value="09:00">09:00</option>
+                        <option value="09:10">09:10</option>
+                        <option value="09:20">09:20</option>
+                        <option value="09:30">09:30</option>
+                        <option value="09:40">09:40</option>
+                        <option value="09:50">09:50</option>
+                        <option value="10:00" selected>10:00</option>
+                        <option value="10:10">10:10</option>
+                        <option value="10:20">10:20</option>
+                        <option value="10:30">10:30</option>
+                        <option value="10:40">10:40</option>
+                        <option value="10:50">10:50</option>
+                        <option value="11:00">11:00</option>
+                        <option value="11:10">11:10</option>
+                        <option value="11:20">11:20</option>
+                        <option value="11:30">11:30</option>
+                        <option value="11:40">11:40</option>
+                        <option value="11:50">11:50</option>
+                        <option value="12:00">12:00</option>
+                        <option value="12:10">12:10</option>
+                        <option value="12:20">12:20</option>
+                        <option value="12:30">12:30</option>
+                        <option value="12:40">12:40</option>
+                        <option value="12:50">12:50</option>
+                        <option value="13:00">13:00</option>
+                        <option value="13:10">13:10</option>
+                        <option value="13:20">13:20</option>
+                        <option value="13:30">13:30</option>
+                        <option value="13:40">13:40</option>
+                        <option value="13:50">13:50</option>
+                        <option value="14:00">14:00</option>
+                        <option value="14:10">14:10</option>
+                        <option value="14:20">14:20</option>
+                        <option value="14:30">14:30</option>
+                        <option value="14:40">14:40</option>
+                        <option value="14:50">14:50</option>
+                        <option value="15:00">15:00</option>
+                        <option value="15:10">15:10</option>
+                        <option value="15:20">15:20</option>
+                        <option value="15:30">15:30</option>
+                        <option value="15:40">15:40</option>
+                        <option value="15:50">15:50</option>
+                        <option value="16:00">16:00</option>
+                        <option value="16:10">16:10</option>
+                        <option value="16:20">16:20</option>
+                        <option value="16:30">16:30</option>
+                        <option value="16:40">16:40</option>
+                        <option value="16:50">16:50</option>
+                        <option value="17:00">17:00</option>
+                        <option value="17:10">17:10</option>
+                        <option value="17:20">17:20</option>
+                        <option value="17:30">17:30</option>
+                        <option value="17:40">17:40</option>
+                        <option value="17:50">17:50</option>
+                      </select>
                       <select id="endPreset">
                         <option value="">送迎選択</option>
                         <option value="施設送迎">施設送迎</option>
@@ -550,8 +668,7 @@
       entries: [],
       checkItems: [...DEFAULT_CHECK_ITEMS],
       current: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-      startUndecided: false,
-      endUndecided: false
+
     };
 
     const el = {
@@ -564,11 +681,9 @@
       endHour: document.getElementById('endHour'),
       startPreset: document.getElementById('startPreset'),
       endPreset: document.getElementById('endPreset'),
-      startUndecidedBtn: document.getElementById('startUndecidedBtn'),
-      endUndecidedBtn: document.getElementById('endUndecidedBtn'),
+
       room: document.getElementById('room'),
-      transportCheckin: document.getElementById('transportCheckin')||{value:''},
-      transportCheckout: document.getElementById('transportCheckout')||{value:''},
+
 
       mealInfo: document.getElementById('mealInfo'),
       lastBowelDate: document.getElementById('lastBowelDate'),
@@ -673,10 +788,10 @@
     }
 
     function loadCheckItems() { /* DB経由のためloadFromStorageで処理 */ }
-    function combineDateTime(date, time) { if (!date) return null; return new Date(`${date}T${time || '00:00'}`); }
+    function combineDateTime(date, time) { if (!date) return null; const t=(time==='未定'||!time)?'00:00':time; return new Date(`${date}T${t}`); }
     function fmtDate(date) { return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`; }
     function fmtTime(date) { return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`; }
-    function fmtTimeEntry(entry, which){ if(which==='start' && entry.startUndecided) return '未定'; if(which==='end' && entry.endUndecided) return '未定'; const d=combineDateTime(which==='start'?entry.startDate:entry.endDate, which==='start'?entry.startHour:entry.endHour); return d?fmtTime(d):''; }
+    function fmtTimeEntry(entry, which){ const h=which==='start'?entry.startHour:entry.endHour; if(h==='未定'||!h) return '未定'; const d=combineDateTime(which==='start'?entry.startDate:entry.endDate,h); return d?fmtTime(d):''; }
     function fmtDateTime(date) { return `${fmtDate(date)} ${fmtTime(date)}`; }
     function fmtYmd(dateString) { if (!dateString) return ''; const d = new Date(`${dateString}T00:00`); return Number.isNaN(d.getTime()) ? dateString : fmtDate(d); }
     function startOfDate(date) { return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0); }
@@ -690,11 +805,7 @@
     }
     function openEntryDrawer(){ el.entryDrawer.classList.add('show'); el.entryDrawer.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
     function closeEntryDrawer(){ el.entryDrawer.classList.remove('show'); el.entryDrawer.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
-    function setUndecided(which, flag){
-      if(which==='start'){ state.startUndecided=flag; el.startUndecidedBtn.classList.toggle('active',flag); document.getElementById('startRow').classList.toggle('time-undecided',flag); if(flag) el.startHour.value='00:00'; }
-      else { state.endUndecided=flag; el.endUndecidedBtn.classList.toggle('active',flag); document.getElementById('endRow').classList.toggle('time-undecided',flag); if(flag) el.endHour.value='00:00'; }
-    }
-    function resetForm(){ el.entryForm.reset(); el.editId.value=''; el.submitBtn.textContent='登録する'; const n=new Date(); const y=n.getFullYear(), m=String(n.getMonth()+1).padStart(2,'0'), d=String(n.getDate()).padStart(2,'0'); el.startDate.value=`${y}-${m}-${d}`; el.endDate.value=`${y}-${m}-${d}`; el.startHour.value='10:00'; el.endHour.value='10:00'; el.bathCount.value=''; setUndecided('start',false); setUndecided('end',false); }
+    function resetForm(){ el.entryForm.reset(); el.editId.value=''; el.submitBtn.textContent='登録する'; const n=new Date(); const y=n.getFullYear(), m=String(n.getMonth()+1).padStart(2,'0'), d=String(n.getDate()).padStart(2,'0'); el.startDate.value=`${y}-${m}-${d}`; el.endDate.value=`${y}-${m}-${d}`; el.startHour.value='10:00'; el.endHour.value='10:00'; el.startPreset.value=''; el.endPreset.value=''; el.bathCount.value=''; }
     function getEntryById(id){ return state.entries.find(x => x.id === id); }
     function getFormData(){
       const start = combineDateTime(el.startDate.value, el.startHour.value);
@@ -705,12 +816,12 @@
       return {
         id: el.editId.value || crypto.randomUUID(),
         name: el.name.value.trim(), startDate: el.startDate.value, startHour: el.startHour.value, endDate: el.endDate.value, endHour: el.endHour.value,
-        room: el.room.value.trim(), transportCheckin: el.transportCheckin.value, transportCheckout: el.transportCheckout.value, transportMethod: el.transportCheckin.value,
+        room: el.room.value.trim(), transportCheckin: el.startPreset.value, transportCheckout: el.endPreset.value, transportMethod: el.startPreset.value,
         mealInfo: el.mealInfo.value.trim(), lastBowelDate: el.lastBowelDate.value, bowelAmount: el.bowelAmount.value, lastBathDate: el.lastBathDate.value,
         bathCount: el.bathCount.value ? String(el.bathCount.value) : '', stayNote: el.stayNote.value.trim(), note: el.note.value.trim(),
         checklistCheckin: Array.isArray(old.checklistCheckin) ? old.checklistCheckin : (Array.isArray(old.checklist) ? old.checklist : []),
         checklistCheckout: Array.isArray(old.checklistCheckout) ? old.checklistCheckout : [], updatedAt: new Date().toISOString(),
-        startUndecided: state.startUndecided, endUndecided: state.endUndecided
+        startUndecided: el.startHour.value==='未定', endUndecided: el.endHour.value==='未定'
       };
     }
     function getNameColor(name){ let hash=0; for (let i=0;i<name.length;i++) hash=name.charCodeAt(i)+((hash<<5)-hash); const hue=Math.abs(hash)%360; return {bg:`hsl(${hue} 75% 94%)`, border:`hsl(${hue} 70% 58%)`}; }
@@ -824,7 +935,7 @@
 
     function openLuggage(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="luggageTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('luggageTab').classList.remove('hidden'); el.luggageSelect.value=id; renderLuggageTab(); window.scrollTo({top:0, behavior:'smooth'}); }
     function openSlip(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="slipTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('slipTab').classList.remove('hidden'); el.slipSelect.value=id; renderSlip(); window.scrollTo({top:0, behavior:'smooth'}); }
-    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; if(el.transportCheckin) el.transportCheckin.value=entry.transportCheckin||entry.transportMethod||''; if(el.transportCheckout) el.transportCheckout.value=entry.transportCheckout||''; el.startPreset.value=entry.transportCheckin||entry.transportMethod||''; el.endPreset.value=entry.transportCheckout||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; setUndecided('start', !!entry.startUndecided); setUndecided('end', !!entry.endUndecided); el.submitBtn.textContent='更新する'; openEntryDrawer(); }
+    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.startPreset.value=entry.transportCheckin||entry.transportMethod||''; el.endPreset.value=entry.transportCheckout||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; el.submitBtn.textContent='更新する'; openEntryDrawer(); }
     function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; state.entries=state.entries.filter(x => x.id!==id); deleteEntryFromDB(id); renderAll(); flash('削除しました'); }
 
     function openDayModal(dateStr){
@@ -884,10 +995,8 @@
     el.luggageSaveBtn.addEventListener('click', () => { const index=state.entries.findIndex(x => x.id===el.luggageSelect.value); if (index < 0) return; state.entries[index].checklistCheckin=getChecklistValuesFrom(el.luggageCheckinGrid); state.entries[index].checklistCheckout=getChecklistValuesFrom(el.luggageCheckoutGrid); state.entries[index].updatedAt=new Date().toISOString(); saveSilent(); renderAll(); flash('入所時・退苑時の荷物チェックを保存しました'); });
     el.addLuggageItemBtn.addEventListener('click', addCustomLuggageItem); el.newLuggageItem.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); addCustomLuggageItem(); } });
     el.resetLuggageItemsBtn.addEventListener('click', () => { if (!confirm('追加した荷物項目を初期状態に戻しますか？\n利用者に保存済みのチェック内容は消えません。')) return; state.checkItems=[...DEFAULT_CHECK_ITEMS]; saveCheckItems(); saveSilent(); renderAll(); flash('荷物項目を初期状態に戻しました'); });
-    el.startUndecidedBtn.addEventListener('click', () => setUndecided('start', !state.startUndecided));
-    el.endUndecidedBtn.addEventListener('click', () => setUndecided('end', !state.endUndecided));
-    el.startPreset.addEventListener('change', () => { if (el.startPreset.value) el.transportCheckin.value=el.startPreset.value; });
-    el.endPreset.addEventListener('change', () => { if (el.endPreset.value) el.transportCheckout.value=el.endPreset.value; });
+    el.startPreset.addEventListener('change', () => {});
+    el.endPreset.addEventListener('change', () => {});
     el.openEntryBtn.addEventListener('click', () => { resetForm(); openEntryDrawer(); });
     document.getElementById('dayModalClose').addEventListener('click', closeDayModal);
     document.getElementById('dayModalBackdrop').addEventListener('click', closeDayModal);
