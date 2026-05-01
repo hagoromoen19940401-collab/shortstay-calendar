@@ -687,13 +687,14 @@
 
     async function syncEntriesToDB(){
       if(state.entries.length === 0) return true;
+      const toDate = v => (v && v.trim()) ? v : null;
       const rows = state.entries.map(e => ({
         id: e.id, name: e.name,
-        start_date: e.startDate, start_hour: e.startHour,
-        end_date: e.endDate, end_hour: e.endHour,
-        room: e.room||'', transport_method: e.transportMethod||'', transport_checkout: e.transportCheckout||'',
-        meal_info: e.mealInfo||'', last_bowel_date: e.lastBowelDate||'',
-        bowel_amount: e.bowelAmount||'', last_bath_date: e.lastBathDate||'',
+        start_date: toDate(e.startDate), start_hour: e.startHour||null,
+        end_date: toDate(e.endDate), end_hour: e.endHour||null,
+        room: e.room||'', transport_method: e.transportMethod||'', transport_checkin: e.transportCheckin||e.transportMethod||'', transport_checkout: e.transportCheckout||'',
+        meal_info: e.mealInfo||'', last_bowel_date: toDate(e.lastBowelDate),
+        bowel_amount: e.bowelAmount||'', last_bath_date: toDate(e.lastBathDate),
         bath_count: e.bathCount||'', stay_note: e.stayNote||'', note: e.note||'',
         checklist_checkin: e.checklistCheckin||[],
         checklist_checkout: e.checklistCheckout||[],
