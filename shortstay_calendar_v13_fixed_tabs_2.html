@@ -78,10 +78,6 @@
     }
     textarea{min-height:96px;resize:vertical;}
     .inline{display:grid;grid-template-columns:1fr 120px;gap:8px;}
-    .inline-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-    .time-picker{display:flex;flex-direction:column;gap:6px;min-width:0;}
-    .time-detail{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
-    .time-detail select{min-height:48px;padding:12px 10px;border-radius:14px;}
     .form-actions{display:flex;gap:8px;flex-wrap:wrap;padding-top:4px;}
     .calendar-shell{padding:12px;}
     .calendar-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
@@ -194,11 +190,6 @@
       .day-mobile-badges{display:none;}
       .day-mobile-count{display:none;}
     }
-
-    .sync-status{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:10px 12px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);font-size:12px;font-weight:800;color:#475569;min-height:42px;}
-    .sync-status.ok{background:#f0fdf4;color:#166534;border-color:#bbf7d0;}
-    .sync-status.warn{background:#fff7ed;color:#9a3412;border-color:#fed7aa;}
-    .sync-status.err{background:#fff1f2;color:#991b1b;border-color:#fecaca;}
     @media print{
       @page { size: A4 portrait; margin: 8mm; }
       body { background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
@@ -255,23 +246,13 @@
         font-size:6px !important; padding:1px 3px !important; bottom:1px !important; border-radius:2px !important;
       }
 
-      /* ── 利用票印刷モード：B5で利用票だけ印刷 ── */
-      body.print-slip .hero,
-      body.print-slip #calendarTab,
-      body.print-slip #listTab,
-      body.print-slip #luggageTab { display:none !important; }
-      body.print-slip #slipTab { display:block !important; }
-      body.print-slip .wrap { max-width:none; padding:0; }
-      body.print-slip .slip-card { border:0; padding:0; }
-      body.print-slip .slip-sheet {
-        width:100%;
-        max-width:176mm;
-        min-height:250mm;
-        margin:0 auto;
-        border:0;
-        padding:0;
-        box-shadow:none;
-      }
+      /* ── 利用票印刷モード（従来） ── */
+      body:not(.print-calendar) #calendarTab,
+      body:not(.print-calendar) #listTab,
+      body:not(.print-calendar) #luggageTab { display:none !important; }
+      body:not(.print-calendar) #slipTab.hidden { display:block !important; }
+      body:not(.print-calendar) .slip-card { border:0; padding:0; }
+      body:not(.print-calendar) .slip-sheet { border:0; padding:0; }
     }
   </style>
 </head>
@@ -280,12 +261,10 @@
     <div class="hero">
       <div>
         <h1 class="title">はごろも苑ショートステイ利用カレンダー</h1>
-        <div class="sub">カレンダー広め表示＋入苑予定者＋退苑予定者の見落とし防止</div>
+        <div class="sub">カレンダー広め表示＋未返却の視覚表示＋退苑予定者の見落とし防止</div>
       </div>
       <div class="toolbar no-print">
         <button class="btn soft" id="saveBtn">保存</button>
-        <button class="btn" id="reloadBtn" type="button">最新読込</button>
-        <span class="sync-status warn" id="syncStatus">未接続</span>
         <button class="btn" id="exportBtn">書き出し</button>
         <label class="btn" for="importFile">読込</label>
         <input id="importFile" type="file" accept="application/json" class="hidden" />
@@ -297,7 +276,7 @@
       <button class="tab active" data-tab="calendarTab">月間カレンダー</button>
       <button class="tab" data-tab="listTab">登録一覧</button>
       <button class="tab" data-tab="luggageTab">荷物チェック</button>
-      <button class="tab" data-tab="slipTab">利用票/編集</button>
+      <button class="tab" data-tab="slipTab">利用票</button>
       <button class="btn primary" type="button" id="openEntryBtn">＋ 利用者登録</button>
     </div>
 
@@ -308,7 +287,7 @@
           <div class="drawer-head">
             <div>
               <h2 class="drawer-title">利用者登録</h2>
-              <div class="drawer-sub">新規登録は最低限の情報だけ。居室・食事・排泄・入浴・備考は「利用票」タブで編集できます。</div>
+              <div class="drawer-sub">まず利用者登録をして、荷物チェックは登録後に別タブで行えます。</div>
             </div>
             <button class="close-btn" type="button" id="closeEntryBtn">閉じる</button>
           </div>
@@ -327,13 +306,19 @@
                     <label>入苑日時</label>
                     <div class="inline-3">
                       <input id="startDate" type="date" required />
-                      <div class="time-picker" data-time-picker="start">
-                        <input id="startHour" type="hidden" value="10:00" />
-                        <div class="time-detail" id="startTimeDetail">
-                          <select id="startHourSelect" aria-label="入苑 時"></select>
-                          <select id="startMinuteSelect" aria-label="入苑 分"></select>
-                        </div>
-                      </div>
+                      <select id="startHour">
+                        <option value="未定">時間未定</option>
+                        <option value="08:00">08:00</option>
+                        <option value="09:00">09:00</option>
+                        <option value="10:00" selected>10:00</option>
+                        <option value="11:00">11:00</option>
+                        <option value="12:00">12:00</option>
+                        <option value="13:00">13:00</option>
+                        <option value="14:00">14:00</option>
+                        <option value="15:00">15:00</option>
+                        <option value="16:00">16:00</option>
+                        <option value="17:00">17:00</option>
+                      </select>
                       <select id="startPreset">
                         <option value="">送迎選択</option>
                         <option value="施設送迎">施設送迎</option>
@@ -347,13 +332,19 @@
                     <label>退苑日時</label>
                     <div class="inline-3">
                       <input id="endDate" type="date" required />
-                      <div class="time-picker" data-time-picker="end">
-                        <input id="endHour" type="hidden" value="10:00" />
-                        <div class="time-detail" id="endTimeDetail">
-                          <select id="endHourSelect" aria-label="退苑 時"></select>
-                          <select id="endMinuteSelect" aria-label="退苑 分"></select>
-                        </div>
-                      </div>
+                      <select id="endHour">
+                        <option value="未定">時間未定</option>
+                        <option value="08:00">08:00</option>
+                        <option value="09:00">09:00</option>
+                        <option value="10:00" selected>10:00</option>
+                        <option value="11:00">11:00</option>
+                        <option value="12:00">12:00</option>
+                        <option value="13:00">13:00</option>
+                        <option value="14:00">14:00</option>
+                        <option value="15:00">15:00</option>
+                        <option value="16:00">16:00</option>
+                        <option value="17:00">17:00</option>
+                      </select>
                       <select id="endPreset">
                         <option value="">送迎選択</option>
                         <option value="施設送迎">施設送迎</option>
@@ -363,15 +354,57 @@
                     </div>
                   </div>
 
+                  <div class="field">
+                    <label for="room">居室</label>
+                    <input id="room" type="text" placeholder="例）20号室" />
+                  </div>
+
+
+
+
                   <div class="field full">
-                    <div class="note-box">
-                      登録後の詳細情報（居室・食事・排泄・入浴・備考など）は、上の「利用票」タブから編集できます。
-                    </div>
+                    <label for="mealInfo">お食事について</label>
+                    <textarea id="mealInfo" placeholder="食事量・食形態・むせ込み・好き嫌いなど"></textarea>
+                  </div>
+
+                  <div class="field">
+                    <label for="lastBowelDate">最終排便日</label>
+                    <input id="lastBowelDate" type="date" />
+                  </div>
+
+                  <div class="field">
+                    <label for="bowelAmount">排便量</label>
+                    <select id="bowelAmount">
+                      <option value="">未設定</option>
+                      <option value="少">少</option>
+                      <option value="中">中</option>
+                      <option value="多">多</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="lastBathDate">最終入浴日</label>
+                    <input id="lastBathDate" type="date" />
+                  </div>
+
+                  <div class="field">
+                    <label for="bathCount">利用中の入浴回数</label>
+                    <input id="bathCount" type="number" min="0" step="1" placeholder="例）2" />
+                  </div>
+
+                  <div class="field full">
+                    <label for="stayNote">利用中の様子</label>
+                    <textarea id="stayNote" placeholder="日中の様子、睡眠、食事、活動、気分など"></textarea>
+                  </div>
+
+                  <div class="field full">
+                    <label for="note">備考</label>
+                    <textarea id="note" placeholder="注意事項、送迎メモ、ご家族連絡など"></textarea>
                   </div>
                 </div>
 
                 <div class="form-actions">
-                  <button class="btn primary" type="submit" id="submitBtn">登録する</button>
+                  <button class="btn primary" type="submit" id="submitBtn" onclick="setTimeout(()=>{ document.getElementById('entryDrawer').classList.remove('show'); document.body.style.overflow=''; },50)">登録する</button>
                   <button class="btn" type="button" id="cancelEditBtn">入力リセット</button>
                 </div>
               </form>
@@ -401,7 +434,7 @@
 
             <div class="calendar-summary-grid no-print">
               <div class="info-panel warning-panel">
-                <h3 class="info-title">入苑予定者一覧</h3>
+                <h3 class="info-title">未返却・要確認</h3>
                 <div class="warn-list" id="calendarReturnList"></div>
               </div>
               <div class="info-panel">
@@ -418,68 +451,14 @@
           <div class="card-body slip-card">
             <div class="slip-toolbar no-print">
               <div>
-                <h3 class="section-title">利用票・詳細編集</h3>
-                <div class="muted">ここで内容を編集して、そのまま利用票として印刷できます。</div>
+                <h3 class="section-title">利用票</h3>
+                <div class="muted">家族へお渡しする用のシンプル表示です。</div>
               </div>
               <div class="toolbar">
                 <select id="slipSelect" style="min-width:260px"></select>
-                <button class="btn soft" id="detailSaveBtn" type="button">内容を保存</button>
                 <button class="btn soft" id="slipPrintBtn" type="button">この利用票を印刷</button>
               </div>
             </div>
-
-            <div id="detailEmpty" class="empty hidden">利用者を登録すると、ここで利用票の内容を編集できます。</div>
-
-            <div id="detailFormWrap" class="slip-box no-print" style="margin-bottom:14px;">
-              <div id="detailMeta" class="muted" style="margin-bottom:12px;"></div>
-              <div class="form-grid">
-                <div class="field">
-                  <label for="detailRoom">居室</label>
-                  <input id="detailRoom" type="text" placeholder="例）20号室" />
-                </div>
-
-                <div class="field full">
-                  <label for="detailMealInfo">お食事について</label>
-                  <textarea id="detailMealInfo" placeholder="食事量・食形態・むせ込み・好き嫌いなど"></textarea>
-                </div>
-
-                <div class="field">
-                  <label for="detailLastBowelDate">最終排便日</label>
-                  <input id="detailLastBowelDate" type="date" />
-                </div>
-
-                <div class="field">
-                  <label for="detailBowelAmount">排便量</label>
-                  <select id="detailBowelAmount">
-                    <option value="">未設定</option>
-                    <option value="少">少</option>
-                    <option value="中">中</option>
-                    <option value="多">多</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="detailLastBathDate">最終入浴日</label>
-                  <input id="detailLastBathDate" type="date" />
-                </div>
-
-                <div class="field">
-                  <label for="detailBathCount">利用中の入浴回数</label>
-                  <input id="detailBathCount" type="number" min="0" step="1" placeholder="例）2" />
-                </div>
-
-                <div class="field full">
-                  <label for="detailStayNote">利用中の様子</label>
-                  <textarea id="detailStayNote" placeholder="日中の様子、睡眠、食事、活動、気分など"></textarea>
-                </div>
-
-                <div class="field full">
-                  <label for="detailNote">備考</label>
-                  <textarea id="detailNote" placeholder="注意事項、送迎メモ、ご家族連絡など"></textarea>
-                </div>
-              </div>
-            </div>
-
             <div id="slipContainer"></div>
           </div>
         </div>
@@ -576,8 +555,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const SUPABASE_URL = 'https://fmnkqxzrfqyfxwsfcuxp.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_P0eoNtOVGjVWnvvKYIAVWA_xox2a5ai';
+    const SUPABASE_URL = 'https://xytxjujsydpvmrvnmcnj.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5dHhqdWpzeWRwdm1ydm5tY25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MTc4OTMsImV4cCI6MjA5MzE5Mzg5M30.KsqYdktXaC09X0nVwbbaRsGLvYHdAsN4-EdvocAnEUs';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const STORAGE_KEY = 'shortstay_calendar_v13_data';
@@ -600,26 +579,19 @@
       startHour: document.getElementById('startHour'),
       endDate: document.getElementById('endDate'),
       endHour: document.getElementById('endHour'),
-      startHourSelect: document.getElementById('startHourSelect'),
-      startMinuteSelect: document.getElementById('startMinuteSelect'),
-      endHourSelect: document.getElementById('endHourSelect'),
-      endMinuteSelect: document.getElementById('endMinuteSelect'),
       startPreset: document.getElementById('startPreset'),
       endPreset: document.getElementById('endPreset'),
 
-      detailSelect: document.getElementById('slipSelect'),
-      detailSaveBtn: document.getElementById('detailSaveBtn'),
-      detailEmpty: document.getElementById('detailEmpty'),
-      detailFormWrap: document.getElementById('detailFormWrap'),
-      detailMeta: document.getElementById('detailMeta'),
-      detailRoom: document.getElementById('detailRoom'),
-      detailMealInfo: document.getElementById('detailMealInfo'),
-      detailLastBowelDate: document.getElementById('detailLastBowelDate'),
-      detailBowelAmount: document.getElementById('detailBowelAmount'),
-      detailLastBathDate: document.getElementById('detailLastBathDate'),
-      detailBathCount: document.getElementById('detailBathCount'),
-      detailStayNote: document.getElementById('detailStayNote'),
-      detailNote: document.getElementById('detailNote'),
+      room: document.getElementById('room'),
+
+
+      mealInfo: document.getElementById('mealInfo'),
+      lastBowelDate: document.getElementById('lastBowelDate'),
+      bowelAmount: document.getElementById('bowelAmount'),
+      lastBathDate: document.getElementById('lastBathDate'),
+      bathCount: document.getElementById('bathCount'),
+      stayNote: document.getElementById('stayNote'),
+      note: document.getElementById('note'),
       luggageSelect: document.getElementById('luggageSelect'),
       luggageCheckinGrid: document.getElementById('luggageCheckinGrid'),
       luggageCheckoutGrid: document.getElementById('luggageCheckoutGrid'),
@@ -639,8 +611,6 @@
       submitBtn: document.getElementById('submitBtn'),
       cancelEditBtn: document.getElementById('cancelEditBtn'),
       saveBtn: document.getElementById('saveBtn'),
-      reloadBtn: document.getElementById('reloadBtn'),
-      syncStatus: document.getElementById('syncStatus'),
       exportBtn: document.getElementById('exportBtn'),
       importFile: document.getElementById('importFile'),
       resetBtn: document.getElementById('resetBtn'),
@@ -655,93 +625,65 @@
       plannedCheckoutList: document.getElementById('plannedCheckoutList')
     };
 
-    function setSyncStatus(message, type='warn'){
-      if(!el.syncStatus) return;
-      el.syncStatus.textContent = message;
-      el.syncStatus.className = `sync-status ${type}`;
-    }
-    function shortError(error){
-      if(!error) return '';
-      if(typeof error === 'string') return error;
-      return error.message || error.details || JSON.stringify(error);
-    }
     function saveCheckItems() {
-      return sb.from('shortstay_check_items')
-        .upsert({ id: 1, items: state.checkItems, updated_at: new Date().toISOString() })
-        .then(({error}) => { if(error) throw error; return true; });
+      sb.from('shortstay_check_items').upsert({ id: 1, items: state.checkItems, updated_at: new Date().toISOString() }).then(({error}) => { if(error) console.error(error); });
     }
 
     async function saveToStorage(){
-      try{
-        setSyncStatus('保存中…','warn');
-        await syncEntriesToDB();
-        await saveCheckItems();
-        setSyncStatus(`保存済み ${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`,'ok');
-        flash('保存しました');
-      }catch(e){
-        console.error('saveToStorage error:', e);
-        setSyncStatus('保存エラー','err');
-        alert('保存できませんでした。Supabase設定・通信・RLSを確認してください。\n\n' + shortError(e));
-      }
+      await syncEntriesToDB();
+      await saveCheckItems();
+      flash('保存しました');
     }
 
     async function syncEntriesToDB(){
-      if(state.entries.length === 0) return true;
-      const rows = state.entries.map(e => ({
-        id: e.id, name: e.name,
-        start_date: e.startDate, start_hour: e.startHour,
-        end_date: e.endDate, end_hour: e.endHour,
-        room: e.room||'', transport_method: e.transportMethod||'', transport_checkout: e.transportCheckout||'',
-        meal_info: e.mealInfo||'', last_bowel_date: e.lastBowelDate||'',
-        bowel_amount: e.bowelAmount||'', last_bath_date: e.lastBathDate||'',
-        bath_count: e.bathCount||'', stay_note: e.stayNote||'', note: e.note||'',
-        checklist_checkin: e.checklistCheckin||[],
-        checklist_checkout: e.checklistCheckout||[],
-        updated_at: new Date().toISOString()
-      }));
-      const {error} = await sb.from('shortstay_entries').upsert(rows);
-      if(error) throw error;
-      return true;
+      // 全件upsert
+      if(state.entries.length > 0){
+        const rows = state.entries.map(e => ({
+          id: e.id, name: e.name,
+          start_date: e.startDate, start_hour: e.startHour,
+          end_date: e.endDate, end_hour: e.endHour,
+          room: e.room||'', transport_method: e.transportMethod||'', transport_checkin: e.transportCheckin||e.transportMethod||'', transport_checkout: e.transportCheckout||'',
+          meal_info: e.mealInfo||'', last_bowel_date: e.lastBowelDate||'',
+          bowel_amount: e.bowelAmount||'', last_bath_date: e.lastBathDate||'',
+          bath_count: e.bathCount||'', stay_note: e.stayNote||'', note: e.note||'',
+          checklist_checkin: e.checklistCheckin||[],
+          checklist_checkout: e.checklistCheckout||[],
+          start_undecided: !!e.startUndecided, end_undecided: !!e.endUndecided,
+          updated_at: e.updatedAt||new Date().toISOString()
+        }));
+        const {error} = await sb.from('shortstay_entries').upsert(rows);
+        if(error) console.error(error);
+      }
     }
 
     async function deleteEntryFromDB(id){
       const {error} = await sb.from('shortstay_entries').delete().eq('id', id);
-      if(error) throw error;
-      return true;
+      if(error) console.error(error);
     }
 
-    async function loadFromStorage(showFlash=false){
+    async function loadFromStorage(){
       try {
-        setSyncStatus('読込中…','warn');
         const {data: entries, error: e1} = await sb.from('shortstay_entries').select('*').order('start_date');
-        if(e1) throw e1;
-        if(entries){
+        if(e1){ flash('DBエラー: ' + JSON.stringify(e1)); } else if(entries){
           state.entries = entries.map(r => ({
             id: r.id, name: r.name,
             startDate: r.start_date, startHour: r.start_hour,
             endDate: r.end_date, endHour: r.end_hour,
-            room: r.room||'', transportMethod: r.transport_method||'', transportCheckin: r.transport_method||'', transportCheckout: r.transport_method||'',
+            room: r.room||'', transportMethod: r.transport_checkin||r.transport_method||'', transportCheckin: r.transport_checkin||r.transport_method||'', transportCheckout: r.transport_checkout||'',
             mealInfo: r.meal_info||'', lastBowelDate: r.last_bowel_date||'',
             bowelAmount: r.bowel_amount||'', lastBathDate: r.last_bath_date||'',
             bathCount: r.bath_count||'', stayNote: r.stay_note||'', note: r.note||'',
             checklistCheckin: r.checklist_checkin||[],
             checklistCheckout: r.checklist_checkout||[],
-            startUndecided: r.start_hour === '未定',
-            endUndecided: r.end_hour === '未定',
+            startUndecided: !!r.start_undecided, endUndecided: !!r.end_undecided,
             updatedAt: r.updated_at
           }));
         }
         const {data: ci, error: e2} = await sb.from('shortstay_check_items').select('items').eq('id',1).maybeSingle();
-        if(e2) console.warn('check_items load warning:', e2);
         if(!e2 && ci && Array.isArray(ci.items) && ci.items.length) state.checkItems = ci.items;
-        setSyncStatus(`読込OK ${state.entries.length}件`,'ok');
-        if(showFlash) flash(`最新データを読込しました（${state.entries.length}件）`);
-        return true;
       } catch(e){
-        console.error('loadFromStorage error:', e);
-        setSyncStatus('読込エラー','err');
-        alert('データ読込エラーです。PC側でSupabaseに接続できていない可能性があります。\n\n' + shortError(e));
-        return false;
+        console.error('loadFromStorage error:', JSON.stringify(e));
+        flash('データ読込エラー: ' + (e.message || JSON.stringify(e)));
       }
     }
 
@@ -763,63 +705,8 @@
     }
     function openEntryDrawer(){ el.entryDrawer.classList.add('show'); el.entryDrawer.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
     function closeEntryDrawer(){ el.entryDrawer.classList.remove('show'); el.entryDrawer.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
-    function resetForm(){ el.entryForm.reset(); el.editId.value=''; el.submitBtn.textContent='登録する'; const n=new Date(); const y=n.getFullYear(), m=String(n.getMonth()+1).padStart(2,'0'), d=String(n.getDate()).padStart(2,'0'); el.startDate.value=`${y}-${m}-${d}`; el.endDate.value=`${y}-${m}-${d}`; setTimeValue('start','10:00'); setTimeValue('end','10:00'); el.startPreset.value=''; el.endPreset.value=''; }
+    function resetForm(){ el.entryForm.reset(); el.editId.value=''; el.submitBtn.textContent='登録する'; const n=new Date(); const y=n.getFullYear(), m=String(n.getMonth()+1).padStart(2,'0'), d=String(n.getDate()).padStart(2,'0'); el.startDate.value=`${y}-${m}-${d}`; el.endDate.value=`${y}-${m}-${d}`; el.startHour.value='10:00'; el.endHour.value='10:00'; el.startPreset.value=''; el.endPreset.value=''; el.bathCount.value=''; }
     function getEntryById(id){ return state.entries.find(x => x.id === id); }
-
-    function populateTimeSelects(){
-      const hours = ['未定', ...Array.from({length: 11}, (_, i) => String(i + 7).padStart(2,'0'))];
-      const minutes = ['00','10','20','30','40','50'];
-      [el.startHourSelect, el.endHourSelect].forEach(select => {
-        if(select) select.innerHTML = hours.map(h => h === '未定' ? `<option value="未定">時間未定</option>` : `<option value="${h}">${Number(h)}時</option>`).join('');
-      });
-      [el.startMinuteSelect, el.endMinuteSelect].forEach(select => {
-        if(select) select.innerHTML = minutes.map(m => `<option value="${m}">${m}分</option>`).join('');
-      });
-    }
-
-    function setTimeValue(kind, value){
-      const input = kind === 'start' ? el.startHour : el.endHour;
-      const hourSelect = kind === 'start' ? el.startHourSelect : el.endHourSelect;
-      const minuteSelect = kind === 'start' ? el.startMinuteSelect : el.endMinuteSelect;
-      if (!input || !hourSelect || !minuteSelect) return;
-      if (!value || value === '未定') {
-        input.value = '未定';
-        hourSelect.value = '未定';
-        minuteSelect.value = '00';
-        minuteSelect.disabled = true;
-        return;
-      }
-      const [h='10', m='00'] = value.split(':');
-      hourSelect.value = String(h).padStart(2,'0');
-      minuteSelect.value = ['00','10','20','30','40','50'].includes(m) ? m : '00';
-      minuteSelect.disabled = false;
-      input.value = `${hourSelect.value}:${minuteSelect.value}`;
-    }
-
-    function setTimeFromDetail(kind){
-      const input = kind === 'start' ? el.startHour : el.endHour;
-      const hourSelect = kind === 'start' ? el.startHourSelect : el.endHourSelect;
-      const minuteSelect = kind === 'start' ? el.startMinuteSelect : el.endMinuteSelect;
-      if (!input || !hourSelect || !minuteSelect) return;
-      if (hourSelect.value === '未定') {
-        input.value = '未定';
-        minuteSelect.disabled = true;
-        return;
-      }
-      minuteSelect.disabled = false;
-      input.value = `${hourSelect.value}:${minuteSelect.value}`;
-    }
-
-    function bindTimePickers(){
-      populateTimeSelects();
-      el.startHourSelect.addEventListener('change', () => setTimeFromDetail('start'));
-      el.startMinuteSelect.addEventListener('change', () => setTimeFromDetail('start'));
-      el.endHourSelect.addEventListener('change', () => setTimeFromDetail('end'));
-      el.endMinuteSelect.addEventListener('change', () => setTimeFromDetail('end'));
-      setTimeValue('start', el.startHour.value || '10:00');
-      setTimeValue('end', el.endHour.value || '10:00');
-    }
-
     function getFormData(){
       const start = combineDateTime(el.startDate.value, el.startHour.value);
       const end = combineDateTime(el.endDate.value, el.endHour.value);
@@ -829,9 +716,9 @@
       return {
         id: el.editId.value || crypto.randomUUID(),
         name: el.name.value.trim(), startDate: el.startDate.value, startHour: el.startHour.value, endDate: el.endDate.value, endHour: el.endHour.value,
-        room: old.room || '', transportCheckin: el.startPreset.value, transportCheckout: el.endPreset.value, transportMethod: el.startPreset.value,
-        mealInfo: old.mealInfo || '', lastBowelDate: old.lastBowelDate || '', bowelAmount: old.bowelAmount || '', lastBathDate: old.lastBathDate || '',
-        bathCount: old.bathCount || '', stayNote: old.stayNote || '', note: old.note || '',
+        room: el.room.value.trim(), transportCheckin: el.startPreset.value, transportCheckout: el.endPreset.value, transportMethod: el.startPreset.value,
+        mealInfo: el.mealInfo.value.trim(), lastBowelDate: el.lastBowelDate.value, bowelAmount: el.bowelAmount.value, lastBathDate: el.lastBathDate.value,
+        bathCount: el.bathCount.value ? String(el.bathCount.value) : '', stayNote: el.stayNote.value.trim(), note: el.note.value.trim(),
         checklistCheckin: Array.isArray(old.checklistCheckin) ? old.checklistCheckin : (Array.isArray(old.checklist) ? old.checklist : []),
         checklistCheckout: Array.isArray(old.checklistCheckout) ? old.checklistCheckout : [], updatedAt: new Date().toISOString(),
         startUndecided: el.startHour.value==='未定', endUndecided: el.endHour.value==='未定'
@@ -844,15 +731,11 @@
     function entriesForDay(day){ const startDay=startOfDate(day), endDay=endOfDate(day); return state.entries.filter(entry => { const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour); return s <= endDay && e >= startDay; }).sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); }
     function entriesEndingOnDay(day){ return state.entries.filter(entry => fmtDate(combineDateTime(entry.endDate, entry.endHour)) === fmtDate(day)).sort((a,b)=>combineDateTime(a.endDate,a.endHour)-combineDateTime(b.endDate,b.endHour)); }
     function getUpcomingCheckoutEntries(){ const today=startOfDate(new Date()); const limit=endOfDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()+UPCOMING_DAYS)); return [...state.entries].filter(entry => { const e=combineDateTime(entry.endDate, entry.endHour); return e >= today && e <= limit; }).sort((a,b)=>combineDateTime(a.endDate,a.endHour)-combineDateTime(b.endDate,b.endHour)); }
-    function getUpcomingCheckinEntries(){ const today=startOfDate(new Date()); const limit=endOfDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()+UPCOMING_DAYS)); return [...state.entries].filter(entry => { const s=combineDateTime(entry.startDate, entry.startHour); return s >= today && s <= limit; }).sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); }
     function renderTopSummaries(){
-      const todayText = fmtDate(new Date());
-      const checkoutBadge = `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 本日退苑</span></div>`;
-      const checkinBadge = `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#16a34a;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🌿 本日入苑</span></div>`;
-      const checkins=getUpcomingCheckinEntries();
-      el.calendarReturnList.innerHTML = !checkins.length ? `<div class="summary-empty">直近${UPCOMING_DAYS}日以内の入苑予定はありません。</div>` : checkins.map(entry => { const start=combineDateTime(entry.startDate, entry.startHour); const diff=daysDiffFloor(new Date(), start); let label='本日'; if (diff===1) label='明日'; if (diff>=2) label=`${diff}日後`; const isCheckinDay = fmtDate(start) === todayText; return `<div class="warn-item"><div><div class="warn-name">${escapeHtml(entry.name)}</div><div class="warn-meta">入苑予定: ${fmtDateTime(start)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="warn-meta">${escapeHtml(entry.transportCheckin || entry.transportMethod || '送迎未設定')}</div></div><div class="warn-badges"><span class="mini-chip warn">${label}</span>${isCheckinDay ? checkinBadge : ''}</div></div>`; }).join('');
+      const returnEntries=[...state.entries].filter(needsReturnAttention).sort((a,b)=>combineDateTime(a.endDate,a.endHour)-combineDateTime(b.endDate,b.endHour));
+      el.calendarReturnList.innerHTML = !returnEntries.length ? `<div class="summary-empty">未返却の荷物はありません。</div>` : returnEntries.map(entry => { const missing=getUnreturnedItems(entry); const end=combineDateTime(entry.endDate, entry.endHour); return `<div class="warn-item"><div><div class="warn-name">${escapeHtml(entry.name)}</div><div class="warn-meta">退苑予定: ${fmtDateTime(end)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="warn-meta">未返却: ${escapeHtml(missing.join(' / '))}</div></div><div class="warn-badges"><span class="mini-chip danger">${missing.length}件</span><button class="mini-btn" type="button" onclick="openLuggage('${entry.id}')">荷物確認</button>${isCheckoutDay ? `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span></div>` : ''}</div></div>`; }).join('');
       const planned=getUpcomingCheckoutEntries();
-      el.plannedCheckoutList.innerHTML = !planned.length ? `<div class="summary-empty">直近${UPCOMING_DAYS}日以内の退苑予定はありません。</div>` : planned.map(entry => { const end=combineDateTime(entry.endDate, entry.endHour); const diff=daysDiffFloor(new Date(), end); let label='本日'; if (diff===1) label='明日'; if (diff>=2) label=`${diff}日後`; const missing=getUnreturnedItems(entry); const isCheckoutDay = fmtDate(end) === todayText; return `<div class="planned-item"><div><div class="planned-name">${escapeHtml(entry.name)}</div><div class="planned-meta">${fmtDateTime(end)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="planned-meta">${escapeHtml(entry.transportMethod || '送迎未設定')}</div></div><div class="planned-badges"><span class="mini-chip warn">${label}</span>${missing.length ? `<span class="mini-chip danger">未返却 ${missing.length}</span>` : ''}${isCheckoutDay ? checkoutBadge : ''}</div></div>`; }).join('');
+      el.plannedCheckoutList.innerHTML = !planned.length ? `<div class="summary-empty">直近${UPCOMING_DAYS}日以内の退苑予定はありません。</div>` : planned.map(entry => { const end=combineDateTime(entry.endDate, entry.endHour); const diff=daysDiffFloor(new Date(), end); let label='本日'; if (diff===1) label='明日'; if (diff>=2) label=`${diff}日後`; const missing=getUnreturnedItems(entry); return `<div class="planned-item"><div><div class="planned-name">${escapeHtml(entry.name)}</div><div class="planned-meta">${fmtDateTime(end)}${entry.room ? ` / ${escapeHtml(entry.room)}` : ''}</div><div class="planned-meta">${escapeHtml(entry.transportMethod || '送迎未設定')}</div></div><div class="planned-badges"><span class="mini-chip warn">${label}</span>${missing.length ? `<span class="mini-chip danger">未返却 ${missing.length}</span>` : ''}${isCheckoutDay ? `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span></div>` : ''}</div></div>`; }).join('');
     }
     function renderCalendar(){
       const year=state.current.getFullYear(), month=state.current.getMonth();
@@ -891,9 +774,9 @@
               ${entry.room ? `<div style="font-size:12px;color:#64748b;margin-top:1px;">居室: ${escapeHtml(entry.room)}</div>` : ''}
             </div>
             <div style="display:flex;gap:5px;flex-shrink:0;">
-              <button onclick="editEntry('${entry.id}')" style="border:none;background:#eef2ff;color:#3730a3;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">基本</button>
+              <button onclick="editEntry('${entry.id}')" style="border:none;background:#eef2ff;color:#3730a3;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">編集</button>
               <button onclick="openLuggage('${entry.id}')" style="border:none;background:#f0fdf4;color:#166534;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">荷物</button>
-              <button onclick="openSlip('${entry.id}')" style="border:none;background:#fefce8;color:#854d0e;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">利用票/編集</button>
+              <button onclick="openSlip('${entry.id}')" style="border:none;background:#fefce8;color:#854d0e;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">利用票</button>
               <button onclick="if(confirm('${escapeHtml(entry.name)}さんを削除しますか？')){window.deleteEntry('${entry.id}')}" style="border:none;background:#fee2e2;color:#991b1b;padding:5px 9px;border-radius:8px;font-weight:700;cursor:pointer;font-size:11px;">削除</button>
             </div>
           </div>
@@ -923,71 +806,12 @@
     function calcUsageDays(entry){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour); return Math.floor((new Date(e.getFullYear(),e.getMonth(),e.getDate()) - new Date(s.getFullYear(),s.getMonth(),s.getDate())) / 86400000) + 1; }
     function renderChecklistInto(container, items=[], compareItems=null){ const list=getAllCheckItems(); container.innerHTML=list.map(item => { const checked=items.includes(item), disabled=Array.isArray(compareItems) && !compareItems.includes(item); return `<label class="check-item ${checked?'done':''}" ${disabled?'style="opacity:.45"':''}><input type="checkbox" value="${escapeHtmlAttr(item)}" ${checked?'checked':''} ${disabled?'disabled':''}><span>${escapeHtml(item)}</span></label>`; }).join(''); }
     function getChecklistValuesFrom(container){ return [...container.querySelectorAll('input[type="checkbox"]:checked')].map(x => x.value); }
-    async function addCustomLuggageItem(){ const value=(el.newLuggageItem.value||'').trim(); if (!value) { alert('追加したい荷物項目を入力してください'); return; } if (getAllCheckItems().includes(value)) { flash('同じ項目があるため追加しませんでした'); el.newLuggageItem.value=''; return; } state.checkItems=[...new Set([...state.checkItems, value])]; renderLuggageTab(); const ok=await saveSilent(true); if(ok){ el.newLuggageItem.value=''; flash('荷物項目を追加して自動保存しました'); } }
+    function addCustomLuggageItem(){ const value=(el.newLuggageItem.value||'').trim(); if (!value) { alert('追加したい荷物項目を入力してください'); return; } if (getAllCheckItems().includes(value)) { flash('同じ項目があるため追加しませんでした'); el.newLuggageItem.value=''; return; } state.checkItems=[...new Set([...state.checkItems, value])]; saveCheckItems(); renderLuggageTab(); el.newLuggageItem.value=''; flash('荷物項目を追加しました'); }
     function renderReturnSummary(entry){ const missing=getUnreturnedItems(entry); if (!missing.length) { el.returnSummary.innerHTML=`<div class="return-summary-title" style="color:#166534">未返却なし</div><div class="return-empty">現在、未返却の荷物はありません。</div>`; el.returnSummary.style.borderColor='#bbf7d0'; el.returnSummary.style.background='#f0fdf4'; return; } el.returnSummary.innerHTML=`<div class="return-summary-title">未返却のもの</div><div class="return-pill-wrap">${missing.map(item => `<span class="return-pill">${escapeHtml(item)}</span>`).join('')}</div>`; el.returnSummary.style.borderColor='#fecaca'; el.returnSummary.style.background='#fff1f2'; }
     function renderLuggageTab(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.luggageSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.luggageMeta.textContent='荷物チェックを使うには、先に利用者登録をしてください。'; el.luggageCheckinGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.luggageCheckoutGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.returnSummary.innerHTML=''; return; } const currentId=el.luggageSelect.value || sorted[0].id; el.luggageSelect.innerHTML=sorted.map(entry => { const s=combineDateTime(entry.startDate, entry.startHour), missing=getUnreturnedItems(entry); return `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(s)} 入所${missing.length ? ` / 未返却${missing.length}` : ''}</option>`; }).join(''); const entry=sorted.find(x => x.id === (el.luggageSelect.value || currentId)) || sorted[0]; el.luggageSelect.value=entry.id; const checkinList=Array.isArray(entry.checklistCheckin)?entry.checklistCheckin:(Array.isArray(entry.checklist)?entry.checklist:[]), checkoutList=Array.isArray(entry.checklistCheckout)?entry.checklistCheckout:[]; el.luggageMeta.textContent=`対象: ${entry.name}さん / 居室: ${entry.room || '未設定'} / 利用期間: ${formatStayPeriod(entry)}`; renderReturnSummary(entry); renderChecklistInto(el.luggageCheckinGrid, checkinList); renderChecklistInto(el.luggageCheckoutGrid, checkoutList, checkinList); }
-    function renderSlip(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.slipSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.slipContainer.innerHTML='<div class="empty">利用票を作るには、まず利用者を登録してください。</div>'; return; } const currentId=el.slipSelect.value || sorted[0].id; el.slipSelect.innerHTML=sorted.map(entry => `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 入所</option>`).join(''); const entry=sorted.find(x => x.id === (el.slipSelect.value || currentId)) || sorted[0]; el.slipSelect.value=entry.id; const isCheckoutDay = fmtDate(combineDateTime(entry.endDate, entry.endHour)) === fmtDate(new Date()); const transport=entry.transportMethod || '未設定'; el.slipContainer.innerHTML=`<div class="slip-sheet"><div class="slip-head"><h2 class="slip-title">ショートステイ利用票</h2><div class="slip-sub">ご家族お渡し用</div></div><div class="slip-grid"><div class="slip-row"><div class="slip-label">利用者名</div><div class="slip-value">${escapeHtml(entry.name)}</div></div><div class="slip-row"><div class="slip-label">居室</div><div class="slip-value">${escapeHtml(entry.room || '')}</div></div><div class="slip-row"><div class="slip-label">利用期間</div><div class="slip-value">${formatStayPeriod(entry)}</div></div><div class="slip-row"><div class="slip-label">利用日数</div><div class="slip-value">${calcUsageDays(entry)}日</div></div><div class="slip-row"><div class="slip-label">送迎</div><div class="slip-value">${transport}</div></div><div class="slip-row"><div class="slip-label">作成日</div><div class="slip-value">${fmtDate(new Date())}</div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">お食事について</div><div style="min-height:64px; white-space:pre-wrap;">${escapeHtml(entry.mealInfo || ' ')}</div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">排泄について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終排便日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBowelDate) || '')}</div></div><div class="slip-row"><div class="slip-label">排便量</div><div class="slip-value">${escapeHtml(entry.bowelAmount || '')}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">入浴について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終入浴日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBathDate) || '')}</div></div><div class="slip-row"><div class="slip-label">利用中の回数</div><div class="slip-value">${escapeHtml(entry.bathCount || '')}${entry.bathCount ? '回' : ''}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">利用中の様子</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.stayNote || ' ')}</div></div><div class="slip-box"><div class="section-title" style="font-size:15px; margin-bottom:8px;">備考・申し送り</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.note || ' ')}</div></div><div class="slip-footer"><div><div class="muted">ご家族確認欄</div><div class="sign-line"></div></div><div><div class="muted">施設確認欄</div><div class="sign-line"></div></div>${isCheckoutDay ? `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span></div>` : ''}</div></div>`; }
-    function renderDetails(){
-      const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour));
-      if(!sorted.length){
-        el.detailSelect.innerHTML='<option value="">利用者が未登録です</option>';
-        el.detailEmpty.classList.remove('hidden');
-        el.detailFormWrap.classList.add('hidden');
-        return;
-      }
-      el.detailEmpty.classList.add('hidden');
-      el.detailFormWrap.classList.remove('hidden');
-      const currentId=el.detailSelect.value || sorted[0].id;
-      el.detailSelect.innerHTML=sorted.map(entry => `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 入所</option>`).join('');
-      const entry=sorted.find(x => x.id === (el.detailSelect.value || currentId)) || sorted[0];
-      el.detailSelect.value=entry.id;
-      el.detailMeta.textContent=`対象: ${entry.name}さん / 利用期間: ${formatStayPeriod(entry)}`;
-      el.detailRoom.value=entry.room||'';
-      el.detailMealInfo.value=entry.mealInfo||'';
-      el.detailLastBowelDate.value=entry.lastBowelDate||'';
-      el.detailBowelAmount.value=entry.bowelAmount||'';
-      el.detailLastBathDate.value=entry.lastBathDate||'';
-      el.detailBathCount.value=entry.bathCount||'';
-      el.detailStayNote.value=entry.stayNote||'';
-      el.detailNote.value=entry.note||'';
-    }
-    async function saveDetails(){
-      const entry=getEntryById(el.detailSelect.value || '');
-      if(!entry){ alert('詳細編集する利用者を選んでください'); return; }
-      const before = {...entry};
-      entry.room=el.detailRoom.value.trim();
-      entry.mealInfo=el.detailMealInfo.value.trim();
-      entry.lastBowelDate=el.detailLastBowelDate.value;
-      entry.bowelAmount=el.detailBowelAmount.value;
-      entry.lastBathDate=el.detailLastBathDate.value;
-      entry.bathCount=el.detailBathCount.value ? String(el.detailBathCount.value) : '';
-      entry.stayNote=el.detailStayNote.value.trim();
-      entry.note=el.detailNote.value.trim();
-      entry.updatedAt=new Date().toISOString();
-      renderAll();
-      el.detailSelect.value=entry.id;
-      const ok = await saveSilent();
-      if(!ok){ Object.assign(entry, before); renderAll(); el.detailSelect.value=entry.id; }
-      renderDetails();
-      renderSlip();
-      if(ok) flash('利用票の内容を自動保存しました');
-    }
-    function openDetails(id){ openSlip(id); }
-    function renderAll(){ renderCalendar(); renderList(); renderLuggageTab(); renderSlip(); renderDetails(); }
-    async function saveSilent(includeCheckItems=false){
-      try{
-        setSyncStatus('自動保存中…','warn');
-        await syncEntriesToDB();
-        if(includeCheckItems) await saveCheckItems();
-        setSyncStatus(`自動保存済み ${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`,'ok');
-        return true;
-      }catch(e){
-        console.error('auto save error:', e);
-        setSyncStatus('自動保存エラー','err');
-        alert('自動保存できませんでした。通信・Supabase・RLSを確認してください。\n\n' + shortError(e));
-        return false;
-      }
-    }
+    function renderSlip(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.slipSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.slipContainer.innerHTML='<div class="empty">利用票を作るには、まず利用者を登録してください。</div>'; return; } const currentId=el.slipSelect.value || sorted[0].id; el.slipSelect.innerHTML=sorted.map(entry => `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 入所</option>`).join(''); const entry=sorted.find(x => x.id === (el.slipSelect.value || currentId)) || sorted[0]; el.slipSelect.value=entry.id; const transport=entry.transportMethod || '未設定'; el.slipContainer.innerHTML=`<div class="slip-sheet"><div class="slip-head"><h2 class="slip-title">ショートステイ利用票</h2><div class="slip-sub">ご家族お渡し用</div></div><div class="slip-grid"><div class="slip-row"><div class="slip-label">利用者名</div><div class="slip-value">${escapeHtml(entry.name)}</div></div><div class="slip-row"><div class="slip-label">居室</div><div class="slip-value">${escapeHtml(entry.room || '')}</div></div><div class="slip-row"><div class="slip-label">利用期間</div><div class="slip-value">${formatStayPeriod(entry)}</div></div><div class="slip-row"><div class="slip-label">利用日数</div><div class="slip-value">${calcUsageDays(entry)}日</div></div><div class="slip-row"><div class="slip-label">送迎</div><div class="slip-value">${transport}</div></div><div class="slip-row"><div class="slip-label">作成日</div><div class="slip-value">${fmtDate(new Date())}</div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">お食事について</div><div style="min-height:64px; white-space:pre-wrap;">${escapeHtml(entry.mealInfo || ' ')}</div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">排泄について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終排便日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBowelDate) || '')}</div></div><div class="slip-row"><div class="slip-label">排便量</div><div class="slip-value">${escapeHtml(entry.bowelAmount || '')}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">入浴について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終入浴日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBathDate) || '')}</div></div><div class="slip-row"><div class="slip-label">利用中の回数</div><div class="slip-value">${escapeHtml(entry.bathCount || '')}${entry.bathCount ? '回' : ''}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">利用中の様子</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.stayNote || ' ')}</div></div><div class="slip-box"><div class="section-title" style="font-size:15px; margin-bottom:8px;">備考・申し送り</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.note || ' ')}</div></div><div class="slip-footer"><div><div class="muted">ご家族確認欄</div><div class="sign-line"></div></div><div><div class="muted">施設確認欄</div><div class="sign-line"></div></div>${isCheckoutDay ? `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span></div>` : ''}</div></div>`; }
+    function renderAll(){ renderCalendar(); renderList(); renderLuggageTab(); renderSlip(); }
+    function saveSilent(){ syncEntriesToDB(); }
     function escapeHtml(str){ return String(str ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
     function escapeHtmlAttr(str){ return escapeHtml(str).replaceAll('`','&#96;'); }
     function setupTabs(){ const tabs=document.querySelectorAll('.tab'), panes=['calendarTab','listTab','luggageTab','slipTab'].map(id=>document.getElementById(id)); tabs.forEach(tab => tab.addEventListener('click', () => { tabs.forEach(t=>t.classList.remove('active')); tab.classList.add('active'); panes.forEach(p=>p.classList.add('hidden')); document.getElementById(tab.dataset.tab).classList.remove('hidden'); })); }
@@ -1010,9 +834,9 @@
     }
 
     function openLuggage(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="luggageTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('luggageTab').classList.remove('hidden'); el.luggageSelect.value=id; renderLuggageTab(); window.scrollTo({top:0, behavior:'smooth'}); }
-    function openSlip(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="slipTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('slipTab').classList.remove('hidden'); el.slipSelect.value=id; renderSlip(); renderDetails(); window.scrollTo({top:0, behavior:'smooth'}); }
-    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; setTimeValue('start', entry.startHour||'10:00'); el.endDate.value=entry.endDate||''; setTimeValue('end', entry.endHour||'10:00'); el.startPreset.value=entry.transportCheckin||entry.transportMethod||''; el.endPreset.value=entry.transportCheckout||''; el.submitBtn.textContent='基本情報を更新'; openEntryDrawer(); }
-    async function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; try{ state.entries=state.entries.filter(x => x.id!==id); await deleteEntryFromDB(id); renderAll(); setSyncStatus('削除済み','ok'); flash('削除しました'); }catch(e){ console.error('delete error:', e); setSyncStatus('削除エラー','err'); alert('削除できませんでした。\n\n' + shortError(e)); } }
+    function openSlip(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelector('.tab[data-tab="slipTab"]').classList.add('active'); ['calendarTab','listTab','luggageTab','slipTab'].forEach(id2 => document.getElementById(id2).classList.add('hidden')); document.getElementById('slipTab').classList.remove('hidden'); el.slipSelect.value=id; renderSlip(); window.scrollTo({top:0, behavior:'smooth'}); }
+    function editEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; el.editId.value=entry.id; el.name.value=entry.name||''; el.startDate.value=entry.startDate||''; el.startHour.value=entry.startHour||''; el.endDate.value=entry.endDate||''; el.endHour.value=entry.endHour||''; el.room.value=entry.room||''; el.startPreset.value=entry.transportCheckin||entry.transportMethod||''; el.endPreset.value=entry.transportCheckout||''; el.mealInfo.value=entry.mealInfo||''; el.lastBowelDate.value=entry.lastBowelDate||''; el.bowelAmount.value=entry.bowelAmount||''; el.lastBathDate.value=entry.lastBathDate||''; el.bathCount.value=entry.bathCount||''; el.stayNote.value=entry.stayNote||''; el.note.value=entry.note||''; el.submitBtn.textContent='更新する'; openEntryDrawer(); }
+    function deleteEntry(id){ const entry=state.entries.find(x => x.id===id); if (!entry) return; if (!confirm(`${entry.name}さんの登録を削除しますか？`)) return; state.entries=state.entries.filter(x => x.id!==id); deleteEntryFromDB(id); renderAll(); flash('削除しました'); }
 
     function openDayModal(dateStr){
       const day = new Date(dateStr.replace(/\//g,'-') + 'T00:00');
@@ -1032,8 +856,7 @@
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
               <div style="font-weight:900;font-size:16px;">${escapeHtml(entry.name)}</div>
               <div style="display:flex;gap:6px;">
-                <button onclick="closeDayModal();window.editEntry('${entry.id}');" style="border:none;background:#eef2ff;color:#3730a3;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">基本</button>
-                <button onclick="closeDayModal();window.openSlip('${entry.id}');" style="border:none;background:#e0f2fe;color:#075985;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">利用票/編集</button>
+                <button onclick="closeDayModal();window.editEntry('${entry.id}');" style="border:none;background:#eef2ff;color:#3730a3;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">編集</button>
                 <button onclick="openLuggage('${entry.id}');closeDayModal();" style="border:none;background:#f0fdf4;color:#166534;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">荷物</button>
                 <button onclick="deleteEntry('${entry.id}');closeDayModal();" style="border:none;background:#fee2e2;color:#991b1b;padding:6px 10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px;">削除</button>
               </div>
@@ -1055,86 +878,23 @@
     function closeDayModal(){
       document.getElementById('dayModal').style.display='none';
     }
-    window.openDayModal=openDayModal; window.closeDayModal=closeDayModal; window.deleteEntry=deleteEntry; window.editEntry=editEntry; window.openDetails=openDetails; window.openLuggage=openLuggage; window.openSlip=openSlip;
+    window.openDayModal=openDayModal; window.closeDayModal=closeDayModal; window.deleteEntry=deleteEntry; window.editEntry=editEntry; window.openLuggage=openLuggage; window.openSlip=openSlip;
 
 
-    el.entryForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const data=getFormData();
-      if (!data) return;
-      el.submitBtn.disabled = true;
-      const index=state.entries.findIndex(x => x.id===data.id);
-      const before = index >= 0 ? {...state.entries[index]} : null;
-      if (index >= 0) state.entries[index]=data; else state.entries.push(data);
-      renderAll();
-      const ok = await saveSilent();
-      el.submitBtn.disabled = false;
-      if(!ok){
-        if(index >= 0 && before) state.entries[index]=before;
-        if(index < 0) state.entries = state.entries.filter(x => x.id !== data.id);
-        renderAll();
-        return;
-      }
-      closeEntryDrawer();
-      resetForm();
-      flash(index >= 0 ? '基本情報を自動保存しました' : '登録して自動保存しました');
-    });
+    el.entryForm.addEventListener('submit', e => { e.preventDefault(); const data=getFormData(); if (!data) return; const index=state.entries.findIndex(x => x.id===data.id); if (index >= 0) state.entries[index]=data; else state.entries.push(data); saveSilent(); renderAll(); closeEntryDrawer(); resetForm(); flash(index >= 0 ? '更新しました' : '登録しました'); });
     el.cancelEditBtn.addEventListener('click', () => { resetForm(); closeEntryDrawer(); });
     el.saveBtn.addEventListener('click', saveToStorage);
-    el.reloadBtn.addEventListener('click', async () => { await loadFromStorage(true); renderAll(); });
     el.resetBtn.addEventListener('click', async () => { if (!confirm('全データを削除しますか？')) return; await sb.from('shortstay_entries').delete().neq('id',''); state.entries=[]; renderAll(); resetForm(); flash('全データを削除しました'); });
     el.exportBtn.addEventListener('click', () => { const blob=new Blob([JSON.stringify({ entries: state.entries, checkItems: state.checkItems }, null, 2)], {type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`shortstay_calendar_v13_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); });
-    el.importFile.addEventListener('change', async e => { const file=e.target.files?.[0]; if (!file) return; try { const parsed=JSON.parse(await file.text()); if (Array.isArray(parsed)) state.entries=parsed; else { state.entries=Array.isArray(parsed.entries)?parsed.entries:[]; if (Array.isArray(parsed.checkItems) && parsed.checkItems.length) state.checkItems=parsed.checkItems; } await saveSilent(true); renderAll(); flash('読込して自動保存しました'); } catch { alert('JSON読込に失敗しました'); } finally { e.target.value=''; } });
+    el.importFile.addEventListener('change', async e => { const file=e.target.files?.[0]; if (!file) return; try { const parsed=JSON.parse(await file.text()); if (Array.isArray(parsed)) state.entries=parsed; else { state.entries=Array.isArray(parsed.entries)?parsed.entries:[]; if (Array.isArray(parsed.checkItems) && parsed.checkItems.length) state.checkItems=parsed.checkItems; } saveSilent(); renderAll(); flash('読込しました'); } catch { alert('JSON読込に失敗しました'); } finally { e.target.value=''; } });
     el.prevMonthBtn.addEventListener('click', () => { state.current=new Date(state.current.getFullYear(), state.current.getMonth()-1, 1); renderAll(); });
     el.nextMonthBtn.addEventListener('click', () => { state.current=new Date(state.current.getFullYear(), state.current.getMonth()+1, 1); renderAll(); });
     el.todayBtn.addEventListener('click', () => { state.current=new Date(new Date().getFullYear(), new Date().getMonth(), 1); renderAll(); });
     el.monthPicker.addEventListener('change', () => { if (!el.monthPicker.value) return; const [y,m]=el.monthPicker.value.split('-').map(Number); state.current=new Date(y, m-1, 1); renderAll(); });
-    el.slipSelect.addEventListener('change', () => { renderSlip(); renderDetails(); });
-    function setPrintPageSize(sizeRule){
-      let style = document.getElementById('dynamicPrintPageSize');
-      if(!style){
-        style = document.createElement('style');
-        style.id = 'dynamicPrintPageSize';
-        document.head.appendChild(style);
-      }
-      style.textContent = `@page { size: ${sizeRule}; margin: 8mm; }`;
-    }
-    function clearPrintMode(){
-      document.body.classList.remove('print-calendar','print-slip');
-      const style = document.getElementById('dynamicPrintPageSize');
-      if(style) style.remove();
-    }
-    window.addEventListener('afterprint', clearPrintMode);
-    el.detailSaveBtn.addEventListener('click', saveDetails);
-    el.slipPrintBtn.addEventListener('click', () => {
-      document.body.classList.remove('print-calendar');
-      document.body.classList.add('print-slip');
-      setPrintPageSize('B5 portrait');
-      window.print();
-      setTimeout(clearPrintMode, 1200);
-    });
-    document.getElementById('calPrintBtn').addEventListener('click', () => {
-      document.body.classList.remove('print-slip');
-      document.body.classList.add('print-calendar');
-      setPrintPageSize('A4 portrait');
-      window.print();
-      setTimeout(clearPrintMode, 1200);
-    });
-    el.luggageSelect.addEventListener('change', renderLuggageTab);
-    el.luggageSaveBtn.addEventListener('click', async () => {
-      const index=state.entries.findIndex(x => x.id===el.luggageSelect.value);
-      if (index < 0) return;
-      const before = {...state.entries[index], checklistCheckin:[...(state.entries[index].checklistCheckin||[])], checklistCheckout:[...(state.entries[index].checklistCheckout||[])]};
-      state.entries[index].checklistCheckin=getChecklistValuesFrom(el.luggageCheckinGrid);
-      state.entries[index].checklistCheckout=getChecklistValuesFrom(el.luggageCheckoutGrid);
-      state.entries[index].updatedAt=new Date().toISOString();
-      renderAll();
-      const ok = await saveSilent();
-      if(!ok){ state.entries[index]=before; renderAll(); return; }
-      flash('荷物チェックを自動保存しました');
-    });
+    el.slipSelect.addEventListener('change', renderSlip); el.slipPrintBtn.addEventListener('click', () => window.print()); document.getElementById('calPrintBtn').addEventListener('click', () => { document.body.classList.add('print-calendar'); window.print(); setTimeout(() => document.body.classList.remove('print-calendar'), 1000); }); el.luggageSelect.addEventListener('change', renderLuggageTab);
+    el.luggageSaveBtn.addEventListener('click', () => { const index=state.entries.findIndex(x => x.id===el.luggageSelect.value); if (index < 0) return; state.entries[index].checklistCheckin=getChecklistValuesFrom(el.luggageCheckinGrid); state.entries[index].checklistCheckout=getChecklistValuesFrom(el.luggageCheckoutGrid); state.entries[index].updatedAt=new Date().toISOString(); saveSilent(); renderAll(); flash('入所時・退苑時の荷物チェックを保存しました'); });
     el.addLuggageItemBtn.addEventListener('click', addCustomLuggageItem); el.newLuggageItem.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); addCustomLuggageItem(); } });
-    el.resetLuggageItemsBtn.addEventListener('click', async () => { if (!confirm('追加した荷物項目を初期状態に戻しますか？\n利用者に保存済みのチェック内容は消えません。')) return; state.checkItems=[...DEFAULT_CHECK_ITEMS]; renderAll(); const ok=await saveSilent(true); if(ok) flash('荷物項目を初期状態に戻して自動保存しました'); });
+    el.resetLuggageItemsBtn.addEventListener('click', () => { if (!confirm('追加した荷物項目を初期状態に戻しますか？\n利用者に保存済みのチェック内容は消えません。')) return; state.checkItems=[...DEFAULT_CHECK_ITEMS]; saveCheckItems(); saveSilent(); renderAll(); flash('荷物項目を初期状態に戻しました'); });
     el.startPreset.addEventListener('change', () => {});
     el.endPreset.addEventListener('change', () => {});
     el.openEntryBtn.addEventListener('click', () => { resetForm(); openEntryDrawer(); });
@@ -1142,10 +902,7 @@
     document.getElementById('dayModalBackdrop').addEventListener('click', closeDayModal);
     el.closeEntryBtn.addEventListener('click', closeEntryDrawer); el.drawerBackdrop.addEventListener('click', closeEntryDrawer); document.addEventListener('keydown', e => { if (e.key==='Escape') closeEntryDrawer(); });
 
-    window.addEventListener('focus', async () => { await loadFromStorage(false); renderAll(); });
-    document.addEventListener('visibilitychange', async () => { if(!document.hidden){ await loadFromStorage(false); renderAll(); } });
-
-    bindTimePickers(); loadCheckItems(); loadFromStorage().then(() => { resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); }).catch(e => { console.error(e); resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); });
+    loadCheckItems(); loadFromStorage().then(() => { resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); }).catch(e => { console.error(e); resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); });
   </script>
 </body>
 </html>
