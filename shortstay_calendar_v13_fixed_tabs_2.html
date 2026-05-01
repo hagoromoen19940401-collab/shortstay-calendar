@@ -697,7 +697,6 @@
         bath_count: e.bathCount||'', stay_note: e.stayNote||'', note: e.note||'',
         checklist_checkin: e.checklistCheckin||[],
         checklist_checkout: e.checklistCheckout||[],
-        start_undecided: !!e.startUndecided, end_undecided: !!e.endUndecided,
         updated_at: new Date().toISOString()
       }));
       const {error} = await sb.from('shortstay_entries').upsert(rows);
@@ -727,7 +726,8 @@
             bathCount: r.bath_count||'', stayNote: r.stay_note||'', note: r.note||'',
             checklistCheckin: r.checklist_checkin||[],
             checklistCheckout: r.checklist_checkout||[],
-            startUndecided: !!r.start_undecided, endUndecided: !!r.end_undecided,
+            startUndecided: r.start_hour === '未定',
+            endUndecided: r.end_hour === '未定',
             updatedAt: r.updated_at
           }));
         }
