@@ -160,6 +160,30 @@
     .return-pill-wrap{display:flex;gap:8px;flex-wrap:wrap;}
     .return-pill{display:inline-flex;align-items:center;padding:8px 10px;border-radius:999px;background:#fee2e2;color:#991b1b;font-size:12px;font-weight:800;}
     .return-empty{color:#64748b;font-size:13px;}
+    /* ── 画面用テーマ（面会スケジュール風の緑系）：印刷には適用しない ── */
+    @media screen{
+      :root{--bg:#f2f5f4;--line:#dfe8e5;--line-strong:#c5d6d1;--primary:#3f6e65;--primary-soft:#e7f0ed;--shadow:0 4px 16px rgba(31,64,56,.07);--radius:20px;}
+      .hero{background:#416c63;box-shadow:0 0 0 100vmax #416c63;clip-path:inset(0 -100vmax);margin:-16px 0 20px;padding:14px 0 16px;align-items:center;}
+      .hero-kicker{font-size:12px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.78);margin-bottom:2px;}
+      .title{color:#fff;}
+      .hero .sub{color:rgba(255,255,255,.75);}
+      .btn{border-radius:12px;box-shadow:0 1px 3px rgba(31,64,56,.12);}
+      .btn.soft,.hero .btn:not(.danger){background:var(--primary-soft);color:var(--primary);}
+      .hero .btn{box-shadow:none;}
+      .tab{background:#fff;color:var(--primary);border-color:#cfe0db;}
+      .tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+      .card{border-color:#e6eeeb;}
+      .calendar-head .calendar-nav:first-child{flex:1 1 auto;justify-content:space-between;}
+      #prevMonthBtn,#nextMonthBtn{background:var(--primary-soft);color:var(--primary);border:1px solid #cfe0db;box-shadow:none;}
+      #calPrintBtn{background:var(--primary) !important;}
+      .month-title{font-size:24px;font-weight:900;}
+      .dow{background:#edf3f1;border-radius:8px;}
+      .day{border-color:#e3ebe8;border-radius:12px;}
+      .calendar > .day:nth-child(7n+8):not(.other) .day-num span:first-child{color:#c0392b;}
+      .calendar > .day:nth-child(7n+14):not(.other) .day-num span:first-child{color:#3b64a8;}
+      .entry{border-color:rgba(31,64,56,.10);border-radius:10px;}
+      .info-panel:not(.warning-panel){border-color:#e3ebe8;}
+    }
     @media (max-width: 980px){
       .calendar{gap:6px;}
       .day{min-height:114px;padding:6px;}
@@ -282,6 +306,7 @@
   <div class="wrap">
     <div class="hero">
       <div>
+        <div class="hero-kicker no-print">ショートステイ管理</div>
         <h1 class="title">はごろも苑ショートステイ利用カレンダー</h1>
         <div class="sub">カレンダー広め表示＋入苑予定者＋退苑予定者の見落とし防止</div>
       </div>
