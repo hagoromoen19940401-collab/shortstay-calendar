@@ -580,9 +580,7 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5dHhqdWpzeWRwdm1ydm5tY25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MTc4OTMsImV4cCI6MjA5MzE5Mzg5M30.KsqYdktXaC09X0nVwbbaRsGLvYHdAsN4-EdvocAnEUs';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const STORAGE_KEY = 'shortstay_calendar_v13_data';
     const DEFAULT_CHECK_ITEMS = ['衣類', '薬', '洗面用具', '上履き', '連絡帳', 'オムツ類', 'その他'];
-    const CHECK_ITEM_KEY = 'shortstay_calendar_v13_check_items';
     const UPCOMING_DAYS = 3;
 
     const state = {
@@ -632,7 +630,6 @@
       calendar: document.getElementById('calendar'),
       monthTitle: document.getElementById('monthTitle'),
       monthPicker: document.getElementById('monthPicker'),
-      listBody: document.getElementById('listBody'),
       slipSelect: document.getElementById('slipSelect'),
       slipContainer: document.getElementById('slipContainer'),
       slipPrintBtn: document.getElementById('slipPrintBtn'),
@@ -746,7 +743,6 @@
       }
     }
 
-    function loadCheckItems() { /* DB経由のためloadFromStorageで処理 */ }
     function combineDateTime(date, time) { if (!date) return null; const t=(time==='未定'||!time)?'00:00':time; return new Date(`${date}T${t}`); }
     function fmtDate(date) { return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`; }
     function fmtTime(date) { return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`; }
@@ -973,7 +969,6 @@
       renderSlip();
       if(ok) flash('利用票の内容を自動保存しました');
     }
-    function openDetails(id){ openSlip(id); }
     function renderAll(){ renderCalendar(); renderList(); renderLuggageTab(); renderSlip(); renderDetails(); }
     async function saveSilent(includeCheckItems=false){
       try{
@@ -1049,7 +1044,7 @@
     function closeDayModal(){
       document.getElementById('dayModal').style.display='none';
     }
-    window.openDayModal=openDayModal; window.closeDayModal=closeDayModal; window.deleteEntry=deleteEntry; window.editEntry=editEntry; window.openDetails=openDetails; window.openLuggage=openLuggage; window.openSlip=openSlip;
+    window.openDayModal=openDayModal; window.closeDayModal=closeDayModal; window.deleteEntry=deleteEntry; window.editEntry=editEntry; window.openLuggage=openLuggage; window.openSlip=openSlip;
 
 
     el.entryForm.addEventListener('submit', async e => {
@@ -1129,8 +1124,6 @@
     });
     el.addLuggageItemBtn.addEventListener('click', addCustomLuggageItem); el.newLuggageItem.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); addCustomLuggageItem(); } });
     el.resetLuggageItemsBtn.addEventListener('click', async () => { if (!confirm('追加した荷物項目を初期状態に戻しますか？\n利用者に保存済みのチェック内容は消えません。')) return; state.checkItems=[...DEFAULT_CHECK_ITEMS]; renderAll(); const ok=await saveSilent(true); if(ok) flash('荷物項目を初期状態に戻して自動保存しました'); });
-    el.startPreset.addEventListener('change', () => {});
-    el.endPreset.addEventListener('change', () => {});
     el.openEntryBtn.addEventListener('click', () => { resetForm(); openEntryDrawer(); });
     document.getElementById('dayModalClose').addEventListener('click', closeDayModal);
     document.getElementById('dayModalBackdrop').addEventListener('click', closeDayModal);
@@ -1139,7 +1132,7 @@
     window.addEventListener('focus', async () => { await loadFromStorage(false); renderAll(); });
     document.addEventListener('visibilitychange', async () => { if(!document.hidden){ await loadFromStorage(false); renderAll(); } });
 
-    bindTimePickers(); loadCheckItems(); loadFromStorage().then(() => { resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); }).catch(e => { console.error(e); resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); });
+    bindTimePickers(); loadFromStorage().then(() => { resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); }).catch(e => { console.error(e); resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); });
   </script>
 </body>
 </html>
