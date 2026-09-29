@@ -216,15 +216,16 @@
         min-height: 34mm;
         padding: 2px;
         font-size: 7px;
-        overflow: hidden;
+        overflow: visible;
+        gap: 1px;
         border: 0.3px solid #d1d5db;
       }
-      body.print-calendar .day.other      { background:#f8fafc; }
+      body.print-calendar .day.other      { background:#f8fafc; min-height:0; }
       body.print-calendar .day-num span:first-child { font-size:9px; font-weight:700; }
       body.print-calendar .day-mobile-count,
       body.print-calendar .day-alert-row  { display:none !important; }
       body.print-calendar .day-mobile-badges { display:none !important; }
-      body.print-calendar .day-badges     { display:block !important; }
+      body.print-calendar .day-badges     { display:block !important; overflow:visible; }
 
       body.print-calendar .entry {
         padding: 1px 3px;
@@ -232,9 +233,15 @@
         font-size: 7px;
         line-height: 1.2;
         border-radius: 2px;
+        border-left-width: 3px;
         position: relative;
+        break-inside: avoid;
+        page-break-inside: avoid;
       }
-      body.print-calendar .entry .name   { font-size:7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      body.print-calendar .entry .name   { font-size:7px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      body.print-calendar .entry-head > div { gap:1px 2px !important; }
+      body.print-calendar .entry-head span { font-size:6px !important; line-height:1.3 !important; padding:0 2px !important; border-radius:2px !important; height:auto !important; min-width:0 !important; }
+      body.print-calendar .entry-io { margin-top:1px; line-height:1.1; }
       body.print-calendar .entry .meta   { font-size:6px; }
       body.print-calendar .entry .tag-row { display:none; }
       body.print-calendar .entry[style*="padding-bottom"] { padding-bottom:13px !important; }
