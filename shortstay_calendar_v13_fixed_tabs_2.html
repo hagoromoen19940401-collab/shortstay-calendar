@@ -852,7 +852,7 @@
         }
         const items=entriesForDay(day), endingToday=entriesEndingOnDay(day), hasReturnAlert=endingToday.some(needsReturnAttention), dayAlertCount=endingToday.filter(needsReturnAttention).length;
         const mobileNames = items.map(e => { const c=getNameColor(e.name); const eEnd=combineDateTime(e.endDate,e.endHour); const eStart=combineDateTime(e.startDate,e.startHour); const isMobileCheckout=fmtDate(eEnd)===fmtDate(day); const isMobileCheckin=fmtDate(eStart)===fmtDate(day); return `<span class="day-mobile-name" style="background:${c.bg};color:#1f2937;border-left:3px solid ${c.border};">${isMobileCheckin?'【入】':''}${escapeHtml(e.name)}${isMobileCheckout?'【退】':''}</span>`; }).join('');
-        html += `<div class="day ${fmtDate(day)===todayKey?'today':''} ${hasReturnAlert?'has-return-alert':''}" onclick="openDayModal('${fmtDate(day)}')"><div class="day-num"><span>${day.getDate()}</span><span class="day-mobile-count">${items.length ? items.length+'件' : ''}</span><span class="muted" style="display:none">${items.length ? items.length+'件' : ''}</span></div>${hasReturnAlert ? `<div class="day-alert-row"><span class="day-alert-badge">未返却 ${dayAlertCount}</span></div>` : ''}<div class="day-badges">${items.map(entry => renderDayEntry(entry, day)).join('')}</div><div class="day-mobile-badges">${mobileNames}${hasReturnAlert?'<span style="font-size:9px;color:#dc2626;font-weight:900;">⚠</span>':''}</div></div>`;
+        html += `<div class="day ${fmtDate(day)===todayKey?'today':''} ${hasReturnAlert?'has-return-alert':''}" onclick="openDayModal('${fmtDate(day)}')"><div class="day-num"><span>${day.getDate()}</span><span class="day-mobile-count">${items.length ? items.length+'件' : ''}</span></div>${hasReturnAlert ? `<div class="day-alert-row"><span class="day-alert-badge">未返却 ${dayAlertCount}</span></div>` : ''}<div class="day-badges">${items.map(entry => renderDayEntry(entry, day)).join('')}</div><div class="day-mobile-badges">${mobileNames}${hasReturnAlert?'<span style="font-size:9px;color:#dc2626;font-weight:900;">⚠</span>':''}</div></div>`;
       }
       el.calendar.innerHTML=html; renderTopSummaries();
     }
@@ -864,7 +864,7 @@
       const upcoming = sorted.filter(e => combineDateTime(e.startDate,e.startHour)>now);
       const past     = sorted.filter(e => combineDateTime(e.endDate,e.endHour)<now).reverse();
 
-      function entryCard(entry, accent){
+      function entryCard(entry){
         const s=combineDateTime(entry.startDate,entry.startHour), e=combineDateTime(entry.endDate,entry.endHour);
         const missing=getUnreturnedItems(entry), color=getNameColor(entry.name);
         const days = Math.ceil((combineDateTime(entry.endDate,entry.endHour)-combineDateTime(entry.startDate,entry.startHour))/(1000*60*60*24));
@@ -899,9 +899,9 @@
       document.getElementById('upcomingCount').textContent = upcoming.length ? `${upcoming.length}名` : '';
       document.getElementById('pastCount').textContent     = past.length     ? `${past.length}名` : '';
 
-      document.getElementById('activeList').innerHTML   = active.length   ? active.map(e=>entryCard(e,'#16a34a')).join('')   : emptyMsg('現在利用中の方はいません');
-      document.getElementById('upcomingList').innerHTML = upcoming.length ? upcoming.map(e=>entryCard(e,'#2563eb')).join('') : emptyMsg('予定はありません');
-      document.getElementById('pastList').innerHTML     = past.length     ? past.map(e=>entryCard(e,'#94a3b8')).join('')     : emptyMsg('過去の記録はありません');
+      document.getElementById('activeList').innerHTML   = active.length   ? active.map(e=>entryCard(e)).join('')   : emptyMsg('現在利用中の方はいません');
+      document.getElementById('upcomingList').innerHTML = upcoming.length ? upcoming.map(e=>entryCard(e)).join('') : emptyMsg('予定はありません');
+      document.getElementById('pastList').innerHTML     = past.length     ? past.map(e=>entryCard(e)).join('')     : emptyMsg('過去の記録はありません');
     }
     function formatStayPeriod(entry){ return `${fmtDateTime(combineDateTime(entry.startDate, entry.startHour))} 〜 ${fmtDateTime(combineDateTime(entry.endDate, entry.endHour))}`; }
     function calcUsageDays(entry){ const s=combineDateTime(entry.startDate, entry.startHour), e=combineDateTime(entry.endDate, entry.endHour); return Math.floor((new Date(e.getFullYear(),e.getMonth(),e.getDate()) - new Date(s.getFullYear(),s.getMonth(),s.getDate())) / 86400000) + 1; }
