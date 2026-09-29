@@ -221,6 +221,7 @@
       body.print-calendar .day            {
         break-inside: avoid;
         min-height: 34mm;
+        max-height: none;
         padding: 2px;
         font-size: 7px;
         overflow: visible;
@@ -229,6 +230,8 @@
       }
       body.print-calendar .day.other      { background:#f8fafc; min-height:0; }
       body.print-calendar .day-num span:first-child { font-size:9px; font-weight:700; }
+      body.print-calendar .day-num,
+      body.print-calendar .day-badges     { flex-shrink:0; }
       body.print-calendar .day-mobile-count,
       body.print-calendar .day-alert-row  { display:none !important; }
       body.print-calendar .day-mobile-badges { display:none !important; }
