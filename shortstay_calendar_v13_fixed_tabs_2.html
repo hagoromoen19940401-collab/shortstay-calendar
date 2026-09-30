@@ -153,8 +153,13 @@
     .slip-label{width:120px;flex:0 0 120px;font-weight:800;color:#334155;}
     .slip-value{flex:1;min-width:0;word-break:break-word;}
     .slip-box{border:1px solid var(--line);border-radius:14px;padding:12px;background:#f8fafc;}
-    .slip-footer{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px;}
-    .sign-line{border-bottom:1px solid #94a3b8;height:34px;margin-top:18px;}
+    .slip-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+    .slip-pair > .slip-box{margin-bottom:0 !important;}
+    .slip-pair .slip-grid{grid-template-columns:1fr;gap:6px;}
+    .slip-rule-title{border-bottom:1px solid var(--line);padding-bottom:4px;}
+    .slip-sign{display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin-top:10px;font-size:14px;}
+    .slip-row-wide{grid-column:1/-1;}
+    .slip-writer{display:inline-block;min-width:7em;border-bottom:1px solid #94a3b8;text-align:center;}
     .return-summary{margin-bottom:14px;border:1px solid #fecaca;background:#fff1f2;border-radius:16px;padding:12px;}
     .return-summary-title{font-weight:900;color:#b91c1c;margin-bottom:8px;}
     .return-pill-wrap{display:flex;gap:8px;flex-wrap:wrap;}
@@ -191,7 +196,7 @@
     }
     @media (max-width: 720px){
       .wrap{padding:12px 10px 28px;}
-      .form-grid,.inline,.inline-3,.slip-grid,.slip-footer{grid-template-columns:1fr;}
+      .form-grid,.inline,.inline-3,.slip-grid,.slip-pair{grid-template-columns:1fr;}
       .calendar-shell{padding:10px;}
       .calendar{grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;}
       .dow{font-size:10px;padding:4px 1px;}
@@ -293,12 +298,27 @@
       body.print-slip .slip-sheet {
         width:100%;
         max-width:176mm;
-        min-height:250mm;
+        min-height:0;
         margin:0 auto;
         border:0;
         padding:0;
         box-shadow:none;
       }
+      body.print-slip .slip-head { margin-bottom:8px; }
+      body.print-slip .slip-title { font-size:22px; margin:0 0 2px; }
+      body.print-slip .slip-grid { grid-template-columns:1fr 1fr; gap:4px 16px; margin-bottom:8px; }
+      body.print-slip .slip-row { min-height:0; padding-bottom:4px; }
+      body.print-slip .slip-box { padding:8px 10px; margin-bottom:8px !important; break-inside:avoid; page-break-inside:avoid; }
+      body.print-slip .slip-box .section-title { margin-bottom:4px !important; }
+      body.print-slip .slip-box:has(> .slip-text-stay) { break-inside:auto; page-break-inside:auto; }
+      body.print-slip .slip-pair { grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+      body.print-slip .slip-pair > .slip-box { margin-bottom:0 !important; }
+      body.print-slip .slip-pair .slip-grid { grid-template-columns:1fr; margin-bottom:0; }
+      body.print-slip .slip-text-meal { min-height:2.8em !important; }
+      body.print-slip .slip-text-stay { min-height:5em !important; }
+      body.print-slip .slip-text-note { min-height:3em !important; }
+      body.print-slip .slip-sheet > .slip-grid .slip-label { width:5em; flex-basis:5em; }
+      body.print-slip .slip-sign { margin-top:6px; }
     }
   </style>
 </head>
@@ -506,6 +526,11 @@
                   <textarea id="detailStayNote" placeholder="日中の様子、睡眠、食事、活動、気分など"></textarea>
                 </div>
 
+                <div class="field">
+                  <label for="detailWriter">記入者</label>
+                  <input id="detailWriter" type="text" placeholder="例）山田" />
+                </div>
+
                 <div class="field full">
                   <label for="detailNote">備考</label>
                   <textarea id="detailNote" placeholder="注意事項、送迎メモ、ご家族連絡など"></textarea>
@@ -650,6 +675,7 @@
       detailLastBathDate: document.getElementById('detailLastBathDate'),
       detailBathCount: document.getElementById('detailBathCount'),
       detailStayNote: document.getElementById('detailStayNote'),
+      detailWriter: document.getElementById('detailWriter'),
       detailNote: document.getElementById('detailNote'),
       luggageSelect: document.getElementById('luggageSelect'),
       luggageCheckinGrid: document.getElementById('luggageCheckinGrid'),
@@ -725,12 +751,18 @@
         room: e.room||'', transport_method: e.transportMethod||'', transport_checkin: e.transportCheckin||e.transportMethod||'', transport_checkout: e.transportCheckout||'',
         meal_info: e.mealInfo||'', last_bowel_date: toDate(e.lastBowelDate),
         bowel_amount: e.bowelAmount||'', last_bath_date: toDate(e.lastBathDate),
-        bath_count: e.bathCount||'', stay_note: e.stayNote||'', note: e.note||'',
+        bath_count: e.bathCount||'', stay_note: e.stayNote||'', writer: e.writer||'', note: e.note||'',
         checklist_checkin: e.checklistCheckin||[],
         checklist_checkout: e.checklistCheckout||[],
         updated_at: new Date().toISOString()
       }));
-      const {error} = await sb.from('shortstay_entries').upsert(rows);
+      let {error} = await sb.from('shortstay_entries').upsert(rows);
+      if(error && /writer/.test(error.message||'')){
+        // Supabaseに writer 列が未追加の場合は、記入者を除いて保存する
+        console.warn('writer column missing:', error);
+        ({error} = await sb.from('shortstay_entries').upsert(rows.map(({writer, ...r}) => r)));
+        if(!error) flash('記入者は保存されていません（Supabaseに writer 列を追加してください）');
+      }
       if(error) throw error;
       return true;
     }
@@ -754,7 +786,7 @@
             room: r.room||'', transportMethod: r.transport_method||'', transportCheckin: r.transport_checkin||r.transport_method||'', transportCheckout: r.transport_checkout||'',
             mealInfo: r.meal_info||'', lastBowelDate: r.last_bowel_date||'',
             bowelAmount: r.bowel_amount||'', lastBathDate: r.last_bath_date||'',
-            bathCount: r.bath_count||'', stayNote: r.stay_note||'', note: r.note||'',
+            bathCount: r.bath_count||'', stayNote: r.stay_note||'', writer: r.writer||'', note: r.note||'',
             checklistCheckin: r.checklist_checkin||[],
             checklistCheckout: r.checklist_checkout||[],
             startUndecided: r.start_hour === '未定',
@@ -861,7 +893,7 @@
         name: el.name.value.trim(), startDate: el.startDate.value, startHour: el.startHour.value, endDate: el.endDate.value, endHour: el.endHour.value,
         room: old.room || '', transportCheckin: el.startPreset.value, transportCheckout: el.endPreset.value, transportMethod: el.startPreset.value,
         mealInfo: old.mealInfo || '', lastBowelDate: old.lastBowelDate || '', bowelAmount: old.bowelAmount || '', lastBathDate: old.lastBathDate || '',
-        bathCount: old.bathCount || '', stayNote: old.stayNote || '', note: old.note || '',
+        bathCount: old.bathCount || '', stayNote: old.stayNote || '', writer: old.writer || '', note: old.note || '',
         checklistCheckin: Array.isArray(old.checklistCheckin) ? old.checklistCheckin : (Array.isArray(old.checklist) ? old.checklist : []),
         checklistCheckout: Array.isArray(old.checklistCheckout) ? old.checklistCheckout : [], updatedAt: new Date().toISOString(),
         startUndecided: el.startHour.value==='未定', endUndecided: el.endHour.value==='未定'
@@ -958,7 +990,7 @@
     function renderLuggageTab(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.luggageSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.luggageMeta.textContent='荷物チェックを使うには、先に利用者登録をしてください。'; el.luggageCheckinGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.luggageCheckoutGrid.innerHTML='<div class="empty" style="grid-column:1/-1;">まだ利用者がいません</div>'; el.returnSummary.innerHTML=''; return; } const currentId=el.luggageSelect.value || sorted[0].id; el.luggageSelect.innerHTML=sorted.map(entry => { const s=combineDateTime(entry.startDate, entry.startHour), missing=getUnreturnedItems(entry); return `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(s)} 入所${missing.length ? ` / 未返却${missing.length}` : ''}</option>`; }).join(''); const entry=sorted.find(x => x.id === (el.luggageSelect.value || currentId)) || sorted[0]; el.luggageSelect.value=entry.id; const checkinList=Array.isArray(entry.checklistCheckin)?entry.checklistCheckin:(Array.isArray(entry.checklist)?entry.checklist:[]), checkoutList=Array.isArray(entry.checklistCheckout)?entry.checklistCheckout:[]; el.luggageMeta.textContent=`対象: ${entry.name}さん / 居室: ${entry.room || '未設定'} / 利用期間: ${formatStayPeriod(entry)}`; renderReturnSummary(entry); renderChecklistInto(el.luggageCheckinGrid, checkinList); renderChecklistInto(el.luggageCheckoutGrid, checkoutList, checkinList); }
     function getActiveEntries(){ const now=new Date(); return [...state.entries].filter(e => combineDateTime(e.startDate,e.startHour)<=now && combineDateTime(e.endDate,e.endHour)>=now).sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); }
     function renderSlipActive(selectedId){ const box=document.getElementById('slipActiveList'); if (!box) return; const active=getActiveEntries(); box.innerHTML=active.length ? active.map(e => `<button type="button" class="btn ${e.id===selectedId?'primary':'soft'}" onclick="openSlip('${e.id}')">${escapeHtml(e.name)}</button>`).join('') : '<div class="muted">現在利用中の方はいません</div>'; }
-    function renderSlip(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.slipSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.slipContainer.innerHTML='<div class="empty">利用票を作るには、まず利用者を登録してください。</div>'; renderSlipActive(''); return; } const currentId=el.slipSelect.value || (getActiveEntries()[0] || sorted[0]).id; el.slipSelect.innerHTML=sorted.map(entry => `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 入所</option>`).join(''); const entry=sorted.find(x => x.id === (el.slipSelect.value || currentId)) || sorted[0]; el.slipSelect.value=entry.id; renderSlipActive(entry.id); const isCheckoutDay = fmtDate(combineDateTime(entry.endDate, entry.endHour)) === fmtDate(new Date()); const transport=`迎: ${escapeHtml(entry.transportCheckin || entry.transportMethod || '未設定')} / 送: ${escapeHtml(entry.transportCheckout || '未設定')}`; el.slipContainer.innerHTML=`<div class="slip-sheet"><div class="slip-head"><h2 class="slip-title">ショートステイ利用票</h2><div class="slip-sub">ご家族お渡し用</div></div><div class="slip-grid"><div class="slip-row"><div class="slip-label">利用者名</div><div class="slip-value">${escapeHtml(entry.name)}</div></div><div class="slip-row"><div class="slip-label">居室</div><div class="slip-value">${escapeHtml(entry.room || '')}</div></div><div class="slip-row"><div class="slip-label">利用期間</div><div class="slip-value">${formatStayPeriod(entry)}</div></div><div class="slip-row"><div class="slip-label">利用日数</div><div class="slip-value">${calcUsageDays(entry)}日</div></div><div class="slip-row"><div class="slip-label">送迎</div><div class="slip-value">${transport}</div></div><div class="slip-row"><div class="slip-label">作成日</div><div class="slip-value">${fmtDate(new Date())}</div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">お食事について</div><div style="min-height:64px; white-space:pre-wrap;">${escapeHtml(entry.mealInfo || ' ')}</div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">排泄について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終排便日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBowelDate) || '')}</div></div><div class="slip-row"><div class="slip-label">排便量</div><div class="slip-value">${escapeHtml(entry.bowelAmount || '')}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">入浴について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終入浴日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBathDate) || '')}</div></div><div class="slip-row"><div class="slip-label">利用中の回数</div><div class="slip-value">${escapeHtml(entry.bathCount || '')}${entry.bathCount ? '回' : ''}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">利用中の様子</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.stayNote || ' ')}</div></div><div class="slip-box"><div class="section-title" style="font-size:15px; margin-bottom:8px;">備考・申し送り</div><div style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.note || ' ')}</div></div><div class="slip-footer"><div><div class="muted">ご家族確認欄</div><div class="sign-line"></div></div><div><div class="muted">施設確認欄</div><div class="sign-line"></div></div>${isCheckoutDay ? `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span></div>` : ''}</div></div>`; }
+    function renderSlip(){ const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour)); if (!sorted.length) { el.slipSelect.innerHTML='<option value="">利用者が未登録です</option>'; el.slipContainer.innerHTML='<div class="empty">利用票を作るには、まず利用者を登録してください。</div>'; renderSlipActive(''); return; } const currentId=el.slipSelect.value || (getActiveEntries()[0] || sorted[0]).id; el.slipSelect.innerHTML=sorted.map(entry => `<option value="${entry.id}" ${entry.id===currentId?'selected':''}>${escapeHtml(entry.name)} / ${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 入所</option>`).join(''); const entry=sorted.find(x => x.id === (el.slipSelect.value || currentId)) || sorted[0]; el.slipSelect.value=entry.id; renderSlipActive(entry.id); const isCheckoutDay = fmtDate(combineDateTime(entry.endDate, entry.endHour)) === fmtDate(new Date()); const shortTr=v=>escapeHtml((v||'未設定').replace('施設送迎','施設').replace('家族送迎','家族')); const transport=`迎:${shortTr(entry.transportCheckin || entry.transportMethod)} / 送:${shortTr(entry.transportCheckout)}`; el.slipContainer.innerHTML=`<div class="slip-sheet"><div class="slip-head"><h2 class="slip-title">ショートステイ利用票</h2><div class="slip-sub">ご家族お渡し用</div></div><div class="slip-grid"><div class="slip-row"><div class="slip-label">利用者名</div><div class="slip-value">${escapeHtml(entry.name)}</div></div><div class="slip-row"><div class="slip-label">居室</div><div class="slip-value">${escapeHtml(entry.room || '')}</div></div><div class="slip-row"><div class="slip-label">利用期間</div><div class="slip-value">${fmtDate(combineDateTime(entry.startDate, entry.startHour))} 〜 ${fmtDate(combineDateTime(entry.endDate, entry.endHour))}</div></div><div class="slip-row"><div class="slip-label">利用日数</div><div class="slip-value">${calcUsageDays(entry)}日</div></div><div class="slip-row slip-row-wide"><div class="slip-label">送迎</div><div class="slip-value">${transport}</div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">お食事について</div><div class="slip-text-meal" style="min-height:44px; white-space:pre-wrap;">${escapeHtml(entry.mealInfo || ' ')}</div></div><div class="slip-pair"><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">排泄について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終排便日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBowelDate) || '')}</div></div><div class="slip-row"><div class="slip-label">排便量</div><div class="slip-value">${escapeHtml(entry.bowelAmount || '')}</div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title" style="font-size:15px; margin-bottom:8px;">入浴について</div><div class="slip-grid" style="margin-bottom:0;"><div class="slip-row"><div class="slip-label">最終入浴日</div><div class="slip-value">${escapeHtml(fmtYmd(entry.lastBathDate) || '')}</div></div><div class="slip-row"><div class="slip-label">利用中の回数</div><div class="slip-value">${escapeHtml(entry.bathCount || '')}${entry.bathCount ? '回' : ''}</div></div></div></div></div><div class="slip-box" style="margin-bottom:14px;"><div class="section-title slip-rule-title" style="font-size:15px; margin-bottom:8px;">利用中の様子</div><div class="slip-text-stay" style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.stayNote || ' ')}</div></div><div class="slip-box"><div class="section-title slip-rule-title" style="font-size:15px; margin-bottom:8px;">備考・申し送り</div><div class="slip-text-note" style="min-height:88px; white-space:pre-wrap;">${escapeHtml(entry.note || ' ')}</div></div><div class="slip-sign"><div>記入者：<span class="slip-writer">${escapeHtml(entry.writer || '')}</span></div><div>作成日：${fmtDate(new Date())}</div>${isCheckoutDay ? `<div style="display:flex;justify-content:flex-end;margin-top:5px;"><span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em;">🏠 退苑</span></div>` : ''}</div></div>`; }
     function renderDetails(){
       const sorted=[...state.entries].sort((a,b)=>combineDateTime(a.startDate,a.startHour)-combineDateTime(b.startDate,b.startHour));
       if(!sorted.length){
@@ -981,6 +1013,7 @@
       el.detailLastBathDate.value=entry.lastBathDate||'';
       el.detailBathCount.value=entry.bathCount||'';
       el.detailStayNote.value=entry.stayNote||'';
+      el.detailWriter.value=entry.writer||'';
       el.detailNote.value=entry.note||'';
     }
     async function saveDetails(){
@@ -994,6 +1027,7 @@
       entry.lastBathDate=el.detailLastBathDate.value;
       entry.bathCount=el.detailBathCount.value ? String(el.detailBathCount.value) : '';
       entry.stayNote=el.detailStayNote.value.trim();
+      entry.writer=el.detailWriter.value.trim();
       entry.note=el.detailNote.value.trim();
       entry.updatedAt=new Date().toISOString();
       renderAll();
