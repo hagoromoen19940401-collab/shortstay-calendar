@@ -1,0 +1,8 @@
+# 個人情報入りのバックアップ(利用者データ)。Gitに入れない。
+backup/
+
+# パスワード設定ツール用のPython仮想環境
+tools/.venv/
+
+# Supabase CLI の一時ファイル(プロジェクト識別子などが入る)
+supabase/.temp/
