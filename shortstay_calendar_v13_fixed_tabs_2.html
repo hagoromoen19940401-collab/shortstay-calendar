@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src https://xytxjujsydpvmrvnmcnj.supabase.co; base-uri 'none'; form-action 'none'" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -343,7 +344,14 @@
       body.print-slip .slip-print { font-weight:600; }
       body.print-slip .slip-sign > div { display:block; }
     }
-  </style>
+    .login-overlay{position:fixed;inset:0;z-index:99999;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:16px;}
+  .login-overlay.hidden{display:none;}
+  .login-card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.15);padding:24px;width:100%;max-width:360px;display:grid;gap:12px;}
+  .login-card h2{margin:0;font-size:18px;}
+  .login-card select,.login-card input{font-size:18px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;width:100%;box-sizing:border-box;}
+  .login-msg{color:#b91c1c;font-size:13px;min-height:1.2em;}
+  @media print{.login-overlay{display:none !important;}}
+</style>
 </head>
 <body>
   <div class="wrap">
@@ -357,6 +365,8 @@
         <button class="btn soft" id="saveBtn">保存</button>
         <button class="btn" id="reloadBtn" type="button">最新読込</button>
         <span class="sync-status warn" id="syncStatus">未接続</span>
+        <span class="sync-status ok" id="roleBadge"></span>
+        <button class="btn" id="logoutBtn" type="button">ログアウト</button>
         <button class="btn" id="exportBtn">書き出し</button>
         <label class="btn" for="importFile">読込</label>
         <input id="importFile" type="file" accept="application/json" class="hidden" />
@@ -655,12 +665,77 @@
       <div id="dayModalBody"></div>
     </div>
   </div>
+  <div class="login-overlay hidden no-print" id="loginOverlay">
+    <div class="login-card">
+      <h2>はごろも苑ショートステイ利用カレンダー</h2>
+      <div style="font-size:13px;color:#475569;">ログインしてください(個人情報を含みます)</div>
+      <select id="loginRole" aria-label="区分"><option value="staff">職員</option><option value="admin">管理者</option></select>
+      <input id="loginPin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="パスワード(4桁の数字)" aria-label="パスワード" />
+      <div class="login-msg" id="loginMsg"></div>
+      <button class="btn soft" id="loginBtn" type="button">ログイン</button>
+    </div>
+  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <div class="login-overlay hidden no-print" id="reauthOverlay">
+    <div class="login-card">
+      <h2>管理者パスワードの再入力</h2>
+      <div style="font-size:13px;color:#475569;">全データを削除します。本人確認のため、管理者のパスワード（4桁の数字）をもう一度入力してください。</div>
+      <input id="reauthPw" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="管理者パスワード(4桁の数字)" aria-label="管理者パスワード" />
+      <div class="login-msg" id="reauthMsg"></div>
+      <div style="display:flex;gap:8px;"><button class="btn danger" id="reauthOk" type="button" style="flex:1;">削除を実行</button><button class="btn" id="reauthCancel" type="button" style="flex:1;">キャンセル</button></div>
+    </div>
+  </div>
+
   <script>
     const SUPABASE_URL = 'https://xytxjujsydpvmrvnmcnj.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5dHhqdWpzeWRwdm1ydm5tY25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MTc4OTMsImV4cCI6MjA5MzE5Mzg5M30.KsqYdktXaC09X0nVwbbaRsGLvYHdAsN4-EdvocAnEUs';
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5dHhqdWpzeWRwdm1ydm5tY25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MTc4OTMsImV4cCI6MjA5MzE5Mzg5M30.KsqYdktXaC09X0nVwbbaRsGLvYHdAsN4-EdvocAnEUs';  // anon(公開)キー。テーブルへの直接アクセス権は無く、ログイン用RPCのみ呼べる
+    const DELETE_ALL_CONFIRM = 'DELETE_ALL_SHORTSTAY_ENTRIES';
+
+    // ---- セッション(タブを閉じると消える sessionStorage。URL・Cookie・localStorage には置かない) ----
+    function getSession(){
+      try{
+        const v = JSON.parse(sessionStorage.getItem('ss_session') || 'null');
+        if(v && v.token && v.role && new Date(v.expires_at) > new Date()) return v;
+      }catch(e){}
+      sessionStorage.removeItem('ss_session');
+      return null;
+    }
+    let session = getSession();
+
+    async function rpc(name, args, opts){
+      const useAuth = !(opts && opts.noAuth);
+      if(useAuth){
+        if(!session) { const err = new Error('ログインしてください'); err.unauthorized = true; throw err; }
+        args = Object.assign({ p_token: session.token }, args || {});
+      }
+      let res;
+      try{
+        res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(args || {})
+        });
+      }catch(e){
+        throw new Error('通信できません。ネットワークを確認してください。');
+      }
+      const text = await res.text();
+      let data = null;
+      try{ data = text ? JSON.parse(text) : null; }catch(e){}
+      if(!res.ok){
+        const msg = (data && data.message) || `HTTP ${res.status}`;
+        const err = new Error(msg);
+        err.code = data && data.code;
+        if(useAuth && (err.code === '28000' || /unauthorized/.test(msg))){
+          err.unauthorized = true;
+          err.message = 'ログインの有効期限が切れました。再度ログインしてください。';
+          handleSessionLost();
+        } else if(err.code === '42501' || /forbidden/.test(msg)){
+          err.message = 'この操作は管理者のみ可能です。';
+        }
+        throw err;
+      }
+      return data;
+    }
 
     const DEFAULT_CHECK_ITEMS = ['衣類', '薬', '洗面用具', '上履き', '連絡帳', 'オムツ類', 'その他'];
     const UPCOMING_DAYS = 3;
@@ -746,11 +821,8 @@
       if(typeof error === 'string') return error;
       return error.message || error.details || JSON.stringify(error);
     }
-    function saveCheckItems() {
-      return sb.from('shortstay_check_items')
-        .upsert({ id: 1, items: state.checkItems, updated_at: new Date().toISOString() })
-        .then(({error}) => { if(error) throw error; return true; });
-    }
+    // shortstay_check_items テーブルは本番に存在しないため参照しない(荷物項目は各利用者のチェック内容から復元される)
+    function saveCheckItems() { return Promise.resolve(true); }
 
     async function saveToStorage(){
       try{
@@ -762,14 +834,15 @@
       }catch(e){
         console.error('saveToStorage error:', e);
         setSyncStatus('保存エラー','err');
-        alert('保存できませんでした。Supabase設定・通信・RLSを確認してください。\n\n' + shortError(e));
+        alert('保存できませんでした。\n\n' + shortError(e));
       }
     }
 
-    async function syncEntriesToDB(){
-      if(state.entries.length === 0) return true;
-      const toDate = v => (v && v.trim()) ? v : null;
-      const rows = state.entries.map(e => ({
+    // 最後にDBと同期した時点の内容(変更した利用者だけを送信するため)
+    const lastSaved = new Map();
+    function entryPayload(e){
+      const toDate = v => (v && String(v).trim()) ? v : null;
+      return {
         id: e.id, name: e.name,
         start_date: toDate(e.startDate), start_hour: e.startHour||null,
         end_date: toDate(e.endDate), end_hour: e.endHour||null,
@@ -778,57 +851,71 @@
         bowel_amount: e.bowelAmount||'', last_bath_date: toDate(e.lastBathDate),
         bath_count: e.bathCount||'', stay_note: e.stayNote||'', writer: e.writer||'', note: e.note||'',
         checklist_checkin: e.checklistCheckin||[],
-        checklist_checkout: e.checklistCheckout||[],
-        updated_at: new Date().toISOString()
-      }));
-      let {error} = await sb.from('shortstay_entries').upsert(rows);
-      if(error && /writer/.test(error.message||'')){
-        // Supabaseに writer 列が未追加の場合は、記入者を除いて保存する
-        console.warn('writer column missing:', error);
-        ({error} = await sb.from('shortstay_entries').upsert(rows.map(({writer, ...r}) => r)));
-        if(!error) flash('記入者は保存されていません（Supabaseに writer 列を追加してください）');
+        checklist_checkout: e.checklistCheckout||[]
+      };
+    }
+
+    async function syncEntriesToDB(){
+      for(const e of state.entries){
+        const payload = entryPayload(e);
+        const snapshot = JSON.stringify(payload);
+        if(e.dbUpdatedAt && lastSaved.get(e.id) === snapshot) continue;   // 変更なし
+        const arg = Object.assign({}, payload);
+        if(e.dbUpdatedAt) arg.expected_updated_at = e.dbUpdatedAt;        // 他端末の更新を上書きしない
+        const r = await rpc('ss_upsert_entry', { p_entry: arg });
+        if(!r || !r.ok){
+          if(r && (r.error === 'conflict' || r.error === 'deleted')){
+            await loadFromStorage(false);
+            renderAll();
+            throw new Error(r.error === 'conflict'
+              ? `${e.name}さんの情報は他の端末で更新されていました。最新の内容を読み込みました。内容を確認して、もう一度操作してください。`
+              : `${e.name}さんの登録は他の端末で削除されていました。最新の内容を読み込みました。`);
+          }
+          throw new Error('保存に失敗しました');
+        }
+        e.dbUpdatedAt = r.entry.updated_at;
+        e.updatedAt = r.entry.updated_at;
+        lastSaved.set(e.id, snapshot);
       }
-      if(error) throw error;
       return true;
     }
 
     async function deleteEntryFromDB(id){
-      const {error} = await sb.from('shortstay_entries').delete().eq('id', id);
-      if(error) throw error;
+      await rpc('ss_delete_entry', { p_id: id });
+      lastSaved.delete(id);
       return true;
     }
 
     async function loadFromStorage(showFlash=false){
+      if(!session) return false;
       try {
         setSyncStatus('読込中…','warn');
-        const {data: entries, error: e1} = await sb.from('shortstay_entries').select('*').order('start_date');
-        if(e1) throw e1;
-        if(entries){
-          state.entries = entries.map(r => ({
-            id: r.id, name: r.name,
-            startDate: r.start_date, startHour: r.start_hour,
-            endDate: r.end_date, endHour: r.end_hour,
-            room: r.room||'', transportMethod: r.transport_method||'', transportCheckin: r.transport_checkin||r.transport_method||'', transportCheckout: r.transport_checkout||'',
-            mealInfo: r.meal_info||'', lastBowelDate: r.last_bowel_date||'',
-            bowelAmount: r.bowel_amount||'', lastBathDate: r.last_bath_date||'',
-            bathCount: r.bath_count||'', stayNote: r.stay_note||'', writer: r.writer||'', note: r.note||'',
-            checklistCheckin: r.checklist_checkin||[],
-            checklistCheckout: r.checklist_checkout||[],
-            startUndecided: r.start_hour === '未定',
-            endUndecided: !r.end_date,
-            updatedAt: r.updated_at
-          }));
-        }
-        const {data: ci, error: e2} = await sb.from('shortstay_check_items').select('items').eq('id',1).maybeSingle();
-        if(e2) console.warn('check_items load warning:', e2);
-        if(!e2 && ci && Array.isArray(ci.items) && ci.items.length) state.checkItems = ci.items;
+        const entries = await rpc('ss_list_entries', {});
+        state.entries = (entries || []).map(r => ({
+          id: r.id, name: r.name,
+          startDate: r.start_date, startHour: r.start_hour,
+          endDate: r.end_date, endHour: r.end_hour,
+          room: r.room||'', transportMethod: r.transport_method||'', transportCheckin: r.transport_checkin||r.transport_method||'', transportCheckout: r.transport_checkout||'',
+          mealInfo: r.meal_info||'', lastBowelDate: r.last_bowel_date||'',
+          bowelAmount: r.bowel_amount||'', lastBathDate: r.last_bath_date||'',
+          bathCount: r.bath_count||'', stayNote: r.stay_note||'', writer: r.writer||'', note: r.note||'',
+          checklistCheckin: r.checklist_checkin||[],
+          checklistCheckout: r.checklist_checkout||[],
+          startUndecided: r.start_hour === '未定',
+          endUndecided: !r.end_date,
+          updatedAt: r.updated_at,
+          dbUpdatedAt: r.updated_at
+        }));
+        lastSaved.clear();
+        state.entries.forEach(e => lastSaved.set(e.id, JSON.stringify(entryPayload(e))));
         setSyncStatus(`読込OK ${state.entries.length}件`,'ok');
         if(showFlash) flash(`最新データを読込しました（${state.entries.length}件）`);
         return true;
       } catch(e){
+        if(e.unauthorized) return false;
         console.error('loadFromStorage error:', e);
         setSyncStatus('読込エラー','err');
-        alert('データ読込エラーです。PC側でSupabaseに接続できていない可能性があります。\n\n' + shortError(e));
+        alert('データ読込エラーです。\n\n' + shortError(e));
         return false;
       }
     }
@@ -924,6 +1011,7 @@
         bathCount: old.bathCount || '', stayNote: old.stayNote || '', writer: old.writer || '', note: old.note || '',
         checklistCheckin: Array.isArray(old.checklistCheckin) ? old.checklistCheckin : (Array.isArray(old.checklist) ? old.checklist : []),
         checklistCheckout: Array.isArray(old.checklistCheckout) ? old.checklistCheckout : [], updatedAt: new Date().toISOString(),
+        dbUpdatedAt: old.dbUpdatedAt,
         startUndecided: el.startHour.value==='未定', endUndecided
       };
     }
@@ -1085,7 +1173,7 @@
       }catch(e){
         console.error('auto save error:', e);
         setSyncStatus('自動保存エラー','err');
-        alert('自動保存できませんでした。通信・Supabase・RLSを確認してください。\n\n' + shortError(e));
+        alert('自動保存できませんでした。\n\n' + shortError(e));
         return false;
       }
     }
@@ -1176,9 +1264,26 @@
     el.cancelEditBtn.addEventListener('click', () => { resetForm(); closeEntryDrawer(); });
     el.saveBtn.addEventListener('click', saveToStorage);
     el.reloadBtn.addEventListener('click', async () => { await loadFromStorage(true); renderAll(); });
-    el.resetBtn.addEventListener('click', async () => { if (!confirm('全データを削除しますか？')) return; await sb.from('shortstay_entries').delete().neq('id',''); state.entries=[]; renderAll(); resetForm(); flash('全データを削除しました'); });
+    el.resetBtn.addEventListener('click', async () => {
+      if (!session || session.role !== 'admin') { alert('全消去は管理者のみ可能です。'); return; }
+      if (!confirm('全データを削除しますか？（元に戻せません）')) return;
+      if (prompt('本当に全件削除する場合は「全件削除」と入力してください') !== '全件削除') { flash('キャンセルしました'); return; }
+      const pw = await askAdminPassword();
+      if (pw === null) { flash('キャンセルしました'); return; }
+      try {
+        const r = await rpc('ss_delete_all_entries', { p_confirm: DELETE_ALL_CONFIRM, p_password: pw });
+        if (!r || !r.ok) {
+          if (r && r.error === 'locked') {
+            const t = new Date(r.locked_until).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+            alert(`失敗が続いたためロック中です。${t}以降にもう一度お試しください。\n（削除はしていません）`);
+          } else alert('パスワードが違います。削除していません。');
+          return;
+        }
+        state.entries = []; lastSaved.clear(); renderAll(); resetForm(); flash(`全データを削除しました（${r.deleted}件）`);
+      } catch (e) { alert('全件削除できませんでした。\n\n' + shortError(e)); }
+    });
     el.exportBtn.addEventListener('click', () => { const blob=new Blob([JSON.stringify({ entries: state.entries, checkItems: state.checkItems }, null, 2)], {type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`shortstay_calendar_v13_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); });
-    el.importFile.addEventListener('change', async e => { const file=e.target.files?.[0]; if (!file) return; try { const parsed=JSON.parse(await file.text()); if (Array.isArray(parsed)) state.entries=parsed; else { state.entries=Array.isArray(parsed.entries)?parsed.entries:[]; if (Array.isArray(parsed.checkItems) && parsed.checkItems.length) state.checkItems=parsed.checkItems; } await saveSilent(true); renderAll(); flash('読込して自動保存しました'); } catch { alert('JSON読込に失敗しました'); } finally { e.target.value=''; } });
+    el.importFile.addEventListener('change', async e => { const file=e.target.files?.[0]; if (!file) return; try { const parsed=JSON.parse(await file.text()); const list=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.entries)?parsed.entries:[]); if (!list.every(x => x && typeof x==='object' && typeof x.id==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x.id))) { alert('読込ファイルに不正なIDが含まれているため、読み込みを中止しました。'); return; } if (Array.isArray(parsed)) state.entries=parsed; else { state.entries=Array.isArray(parsed.entries)?parsed.entries:[]; if (Array.isArray(parsed.checkItems) && parsed.checkItems.length) state.checkItems=parsed.checkItems; } await saveSilent(true); renderAll(); flash('読込して自動保存しました'); } catch { alert('JSON読込に失敗しました'); } finally { e.target.value=''; } });
     el.prevMonthBtn.addEventListener('click', () => { state.current=new Date(state.current.getFullYear(), state.current.getMonth()-1, 1); renderAll(); });
     el.nextMonthBtn.addEventListener('click', () => { state.current=new Date(state.current.getFullYear(), state.current.getMonth()+1, 1); renderAll(); });
     el.todayBtn.addEventListener('click', () => { state.current=new Date(new Date().getFullYear(), new Date().getMonth(), 1); renderAll(); });
@@ -1236,10 +1341,89 @@
     document.getElementById('dayModalBackdrop').addEventListener('click', closeDayModal);
     el.closeEntryBtn.addEventListener('click', closeEntryDrawer); el.drawerBackdrop.addEventListener('click', closeEntryDrawer); document.addEventListener('keydown', e => { if (e.key==='Escape') closeEntryDrawer(); });
 
-    window.addEventListener('focus', async () => { await loadFromStorage(false); renderAll(); });
-    document.addEventListener('visibilitychange', async () => { if(!document.hidden){ await loadFromStorage(false); renderAll(); } });
+    // ---- ログイン/ログアウト/起動 ----
+    const loginEls = { overlay: document.getElementById('loginOverlay'), role: document.getElementById('loginRole'), pin: document.getElementById('loginPin'), msg: document.getElementById('loginMsg'), btn: document.getElementById('loginBtn') };
+    // パスワード形式: 職員・管理者とも数字4桁固定。サーバー側でも同じ規則を検証する。
+    function pinFormatOk(role, pin){ return /^[0-9]{4}$/.test(pin); }
+    function pinHint(role){ return 'パスワードは4桁の数字'; }
+    function updatePinInput(){
+      loginEls.pin.maxLength = 4;
+      loginEls.pin.placeholder = 'パスワード(4桁の数字)';
+      loginEls.pin.value = ''; loginEls.msg.textContent = '';
+    }
+    loginEls.role.addEventListener('change', updatePinInput);
+    let uiBooted = false;
+    function bootUi(){
+      if(!uiBooted){ uiBooted = true; resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); }
+      renderAll();
+    }
+    function applySessionUi(){
+      document.getElementById('roleBadge').textContent = session ? (session.role === 'admin' ? '管理者' : '職員') : '';
+      el.resetBtn.style.display = (session && session.role === 'admin') ? '' : 'none';
+      document.getElementById('logoutBtn').style.display = session ? '' : 'none';
+    }
+    function showLogin(msg){
+      state.entries = []; lastSaved.clear();
+      if(uiBooted) renderAll();
+      loginEls.msg.textContent = msg || ''; loginEls.pin.value = '';
+      loginEls.overlay.classList.remove('hidden'); applySessionUi();
+      setTimeout(() => loginEls.pin.focus(), 50);
+    }
+    function handleSessionLost(){
+      session = null; sessionStorage.removeItem('ss_session');
+      showLogin('ログインの有効期限が切れました。もう一度ログインしてください。');
+    }
+    async function doLogin(){
+      const role = loginEls.role.value, pin = loginEls.pin.value;
+      if(!pinFormatOk(role, pin)){ loginEls.msg.textContent = pinHint(role) + 'で入力してください。'; return; }
+      loginEls.btn.disabled = true; loginEls.msg.textContent = '確認中…';
+      try{
+        const r = await rpc('ss_login', { p_role: role, p_pin: pin }, { noAuth: true });
+        if(!r || !r.ok){
+          if(r && r.error === 'locked'){
+            const t = new Date(r.locked_until).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+            loginEls.msg.textContent = `失敗が続いたためロック中です。${t}以降にもう一度お試しください。`;
+          } else loginEls.msg.textContent = 'パスワードが違います。';
+          loginEls.pin.value = ''; return;
+        }
+        session = { token: r.token, role: r.role, expires_at: r.expires_at };
+        sessionStorage.setItem('ss_session', JSON.stringify(session));
+        loginEls.pin.value = ''; loginEls.msg.textContent = '';
+        loginEls.overlay.classList.add('hidden'); applySessionUi();
+        await loadFromStorage(); bootUi();
+      }catch(e){ loginEls.msg.textContent = shortError(e); }
+      finally{ loginEls.btn.disabled = false; }
+    }
+    // 管理者パスワードの再入力(マスク入力)。入力値は呼び出し元へ返すだけで、保存しない。
+    function askAdminPassword(){
+      const ov = document.getElementById('reauthOverlay'), inp = document.getElementById('reauthPw'), msg = document.getElementById('reauthMsg');
+      const ok = document.getElementById('reauthOk'), cancel = document.getElementById('reauthCancel');
+      return new Promise(resolve => {
+        const done = v => { inp.value = ''; msg.textContent = ''; ov.classList.add('hidden'); ok.onclick = cancel.onclick = inp.onkeydown = null; resolve(v); };
+        ok.onclick = () => { const v = inp.value; if(!/^[0-9]{4}$/.test(v)){ msg.textContent = 'パスワードは4桁の数字で入力してください。'; return; } done(v); };
+        cancel.onclick = () => done(null);
+        inp.onkeydown = e => { if(e.key === 'Enter') ok.onclick(); if(e.key === 'Escape') cancel.onclick(); };
+        inp.value = ''; msg.textContent = ''; ov.classList.remove('hidden'); setTimeout(() => inp.focus(), 50);
+      });
+    }
+    loginEls.btn.addEventListener('click', doLogin);
+    loginEls.pin.addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      const t = session && session.token;
+      session = null; sessionStorage.removeItem('ss_session');
+      try{ if(t) await rpc_logout(t); }catch(e){}
+      showLogin('ログアウトしました。');
+    });
+    async function rpc_logout(token){
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/ss_logout`, { method:'POST', headers:{ 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' }, body: JSON.stringify({ p_token: token }) });
+    }
 
-    bindTimePickers(); loadFromStorage().then(() => { resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); }).catch(e => { console.error(e); resetForm(); setupTabs(); bindChecklistTap(el.luggageCheckinGrid); bindChecklistTap(el.luggageCheckoutGrid); renderAll(); });
+    window.addEventListener('focus', async () => { if(!session) return; await loadFromStorage(false); renderAll(); });
+    document.addEventListener('visibilitychange', async () => { if(!document.hidden && session){ await loadFromStorage(false); renderAll(); } });
+
+    bindTimePickers(); applySessionUi();
+    if(session){ loadFromStorage().then(() => { if(session) bootUi(); }); }
+    else { showLogin(''); bootUi(); }
   </script>
 </body>
 </html>
